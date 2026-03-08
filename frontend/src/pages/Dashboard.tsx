@@ -70,13 +70,13 @@ const Dashboard: React.FC = () => {
     const totalSkus = insights.length;
     const criticalCount = insights.filter(i => i.riskLevel === 'CRITICAL').length;
     const highCount = insights.filter(i => i.riskLevel === 'HIGH').length;
-    const mediumCount = insights.filter(i => i.riskLevel === 'MEDIUM').length;
-    const lowCount = insights.filter(i => i.riskLevel === 'LOW').length;
+    const countMedium = insights.filter(i => i.riskLevel === 'MEDIUM').length;
+    const countLow = insights.filter(i => i.riskLevel === 'LOW').length;
     const actionCount = criticalCount + highCount;
 
     const aiSummaryText = totalSkus === 0
         ? "No SKUs loaded yet. Initialize mock data to see AI-driven recommendations."
-        : `AI flags ${actionCount} SKUs needing attention (${criticalCount} critical, ${highCount} high risk). The rest are in medium/low risk bands.`;
+        : `AI flags ${actionCount} SKUs needing attention (${criticalCount} critical, ${highCount} high risk). There are ${countMedium} medium and ${countLow} low risk items.`;
 
     const handleScenarioChange = (
         _event: React.MouseEvent<HTMLElement>,
@@ -160,7 +160,7 @@ const Dashboard: React.FC = () => {
                                     <CardContent>
                                         <Typography variant="subtitle2" color="text.secondary">Low Risk</Typography>
                                         <Typography variant="h5" fontWeight="bold" color="success.main">
-                                            {lowCount}
+                                            {countLow}
                                         </Typography>
                                     </CardContent>
                                 </Card>

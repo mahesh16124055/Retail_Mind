@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rvp3e5r3v0.execute-api.us-east-1.amazonaws.com/Prod/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -29,9 +29,9 @@ export const RetailMindApi = {
     const response = await apiClient.post(`/data/seed/${storeId}`);
     return response.data;
   },
-  
+
   initializeDatabase: async (): Promise<string> => {
-     const response = await apiClient.post(`/data/init-tables`);
-     return response.data;
+    const response = await apiClient.post(`/data/init-tables`);
+    return response.data;
   }
 };
