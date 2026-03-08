@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Card, CardContent, Grid, Chip,
-    CircularProgress, Button, Alert, Divider
+    CircularProgress, Button, Alert, Divider, ToggleButton, ToggleButtonGroup
 } from '@mui/material';
 import { SmartToy, Warning, CheckCircle, Store } from '@mui/icons-material';
 import { RetailMindApi } from '../services/api';
@@ -11,18 +11,26 @@ const Dashboard: React.FC = () => {
     const [insights, setInsights] = useState<InventoryInsightResponse[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [scenario, setScenario] = useState<'NORMAL' | 'FESTIVAL' | 'SLUMP'>('NORMAL');
 
     // Hardcoded for MVP Demo
     const DEMO_STORE_ID = "101";
 
-    const fetchInsights = async () => {
+    const scenarioLabels: Record<typeof scenario, string> = {
+        NORMAL: 'Normal weekday demand',
+        FESTIVAL: 'Festival spike (Diwali / Pongal)',
+        SLUMP: 'Monsoon / off-season slump'
+    };
+
+    const fetchInsights = async (scenarioOverride?: typeof scenario) => {
+        const effectiveScenario = scenarioOverride ?? scenario;
         setLoading(true);
         setError(null);
         try {
-            const data = await RetailMindApi.getInsights(DEMO_STORE_ID);
+            const data = await RetailMindApi.getInsights(DEMO_STORE_ID, effectiveScenario);
             setInsights(data);
         } catch (err: any) {
-            setError("Failed to fetch AI insights. Is the Spring Boot backend running on port 8080?");
+            setError("Failed to fetch AI insights from the cloud backend. Please try again.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -59,6 +67,26 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    const totalSkus = insights.length;
+    const criticalCount = insights.filter(i => i.riskLevel === 'CRITICAL').length;
+    const highCount = insights.filter(i => i.riskLevel === 'HIGH').length;
+    const mediumCount = insights.filter(i => i.riskLevel === 'MEDIUM').length;
+    const lowCount = insights.filter(i => i.riskLevel === 'LOW').length;
+    const actionCount = criticalCount + highCount;
+
+    const aiSummaryText = totalSkus === 0
+        ? "No SKUs loaded yet. Initialize mock data to see AI-driven recommendations."
+        : `AI flags ${actionCount} SKUs needing attention (${criticalCount} critical, ${highCount} high risk). The rest are in medium/low risk bands.`;
+
+    const handleScenarioChange = (
+        _event: React.MouseEvent<HTMLElement>,
+        newScenario: typeof scenario | null
+    ) => {
+        if (!newScenario) return;
+        setScenario(newScenario);
+        fetchInsights(newScenario);
+    };
+
     return (
         <Box sx={{ flexGrow: 1, p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
@@ -66,11 +94,21 @@ const Dashboard: React.FC = () => {
                     <Store sx={{ mr: 1, verticalAlign: 'bottom' }} />
                     RetailMind Kirana HQ
                 </Typography>
-                <Box gap={2} display="flex">
+                <Box display="flex" gap={2} alignItems="center">
+                    <ToggleButtonGroup
+                        size="small"
+                        value={scenario}
+                        exclusive
+                        onChange={handleScenarioChange}
+                    >
+                        <ToggleButton value="NORMAL">Weekday</ToggleButton>
+                        <ToggleButton value="FESTIVAL">Festival</ToggleButton>
+                        <ToggleButton value="SLUMP">Slump</ToggleButton>
+                    </ToggleButtonGroup>
                     <Button variant="outlined" color="secondary" onClick={handleInitializeDemo}>
                         1. Initialize Mock Data (DynamoDB)
                     </Button>
-                    <Button variant="contained" color="primary" onClick={fetchInsights} disabled={loading}>
+                    <Button variant="contained" color="primary" onClick={() => fetchInsights()} disabled={loading}>
                         2. Run Bedrock AI Analysis
                     </Button>
                 </Box>
@@ -86,6 +124,63 @@ const Dashboard: React.FC = () => {
                 <Alert severity="info" sx={{ mb: 3 }}>No data found. Click 'Initialize Mock Data' to begin the demo.</Alert>
             ) : (
                 <Grid container spacing={3}>
+                    {/* KPI + Summary Row */}
+                    <Grid item xs={12} md={8}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={6} md={3}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="subtitle2" color="text.secondary">Tracked SKUs</Typography>
+                                        <Typography variant="h5" fontWeight="bold">{totalSkus}</Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="subtitle2" color="text.secondary">Need Action</Typography>
+                                        <Typography variant="h5" fontWeight="bold" color="error">
+                                            {actionCount}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="subtitle2" color="text.secondary">Critical</Typography>
+                                        <Typography variant="h5" fontWeight="bold" color="error">
+                                            {criticalCount}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={6} md={3}>
+                                <Card>
+                                    <CardContent>
+                                        <Typography variant="subtitle2" color="text.secondary">Low Risk</Typography>
+                                        <Typography variant="h5" fontWeight="bold" color="success.main">
+                                            {lowCount}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <Card sx={{ height: '100%' }}>
+                            <CardContent>
+                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                    AI Summary ({scenarioLabels[scenario]})
+                                </Typography>
+                                <Typography variant="body2">
+                                    {aiSummaryText}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+
+                    {/* SKU cards */}
                     {insights.map((insight) => (
                         <Grid item xs={12} md={6} lg={4} key={insight.skuId}>
                             <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

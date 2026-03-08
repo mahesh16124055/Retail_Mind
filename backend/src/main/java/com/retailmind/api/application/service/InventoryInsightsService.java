@@ -20,7 +20,7 @@ public class InventoryInsightsService {
         this.bedrockService = bedrockService;
     }
 
-    public List<InventoryInsightResponse> getInsightsForStore(String storeId) {
+    public List<InventoryInsightResponse> getInsightsForStore(String storeId, String scenario) {
         List<InventoryInsightResponse> insights = new ArrayList<>();
 
         // 1. Fetch available SKUs for the store
@@ -41,10 +41,13 @@ public class InventoryInsightsService {
 
             // Only generate an AI recommendation for items with High/Critical risk, or
             // randomly for the demo to save tokens.
-            String aiRec = "Stock is optimal.";
+            String aiRec = "Stock appears healthy for now.";
             if (riskLevel.equals("CRITICAL") || riskLevel.equals("HIGH") || totalStock < 5) {
-                aiRec = bedrockService.generateInventoryRecommendation(sku.getName(), totalStock,
-                        mockAverageDailyDemand);
+                aiRec = bedrockService.generateInventoryRecommendation(
+                        sku.getName(),
+                        totalStock,
+                        mockAverageDailyDemand,
+                        scenario);
             }
 
             insights.add(InventoryInsightResponse.builder()

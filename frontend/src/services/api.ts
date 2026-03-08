@@ -18,8 +18,10 @@ export interface InventoryInsightResponse {
 }
 
 export const RetailMindApi = {
-  getInsights: async (storeId: string): Promise<InventoryInsightResponse[]> => {
-    const response = await apiClient.get(`/dashboard/insights/${storeId}`);
+  getInsights: async (storeId: string, scenario?: string): Promise<InventoryInsightResponse[]> => {
+    const response = await apiClient.get(`/dashboard/insights/${storeId}`, {
+      params: scenario ? { scenario } : undefined,
+    });
     return response.data;
   },
 

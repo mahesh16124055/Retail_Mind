@@ -28,20 +28,28 @@ public class BedrockGenAIService {
         this.objectMapper = objectMapper;
     }
 
-    public String generateInventoryRecommendation(String skuName, int currentStock, int averageDailyDemand) {
+    public String generateInventoryRecommendation(String skuName, int currentStock, int averageDailyDemand,
+            String scenario) {
+        String scenarioText = (scenario == null || scenario.isBlank())
+                ? "The store is operating on a normal weekday demand pattern."
+                : scenario;
+
         String promptText = String.format(
-                "You are an expert Indian retail inventory manager. " +
-                        "I have an item '%s'. " +
-                        "Current stock is %d units. Average daily demand is %d units. " +
-                        "Provide a short, 2-sentence actionable recommendation on whether to reorder now, " +
-                        "wait, or discount the item, and explain the business reasoning.",
-                skuName, currentStock, averageDailyDemand);
+                "You are an expert Indian retail inventory manager for Indian Kirana and Quick Commerce stores. "
+                        +
+                        "Item: '%s'. Current stock: %d units. Approximate average daily demand: %d units. "
+                        +
+                        "Store scenario context: %s. "
+                        +
+                        "In at most 2 short sentences, clearly tell the shop owner whether to reorder now, wait, or discount the item, "
+                        +
+                        "and briefly explain the business reasoning in simple language.",
+                skuName, currentStock, averageDailyDemand, scenarioText);
 
         try {
-            // Claude 3 Messages API payload format
             Map<String, Object> payload = new HashMap<>();
             payload.put("anthropic_version", "bedrock-2023-05-31");
-            payload.put("max_tokens", 300);
+            payload.put("max_tokens", 180);
 
             Map<String, Object> message = new HashMap<>();
             message.put("role", "user");
@@ -73,7 +81,9 @@ public class BedrockGenAIService {
             throw new RuntimeException("Error formatting Bedrock request/response", e);
         } catch (Exception e) {
             System.err.println("Bedrock Exception: " + e.getMessage());
-            return "Unable to generate AI recommendation at this time. Please check stock levels manually.";
+            return String.format(
+                    "Based on stock of %d units and daily demand of %d units, keep a close eye on this SKU and use your judgment for reorders. (AI explanation is temporarily unavailable.)",
+                    currentStock, averageDailyDemand);
         }
     }
 }

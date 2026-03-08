@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.services.dynamodb.model.ResourceInUseException;
 
 import java.util.UUID;
 
@@ -27,12 +28,20 @@ public class DataSeederController {
     @PostMapping("/init-tables")
     public ResponseEntity<String> initTables() {
         try {
-            enhancedClient.table("RetailMind_Store", TableSchema.fromBean(Store.class)).createTable();
-            enhancedClient.table("RetailMind_Sku", TableSchema.fromBean(Sku.class)).createTable();
-            enhancedClient.table("RetailMind_Inventory", TableSchema.fromBean(InventoryItem.class)).createTable();
-            return ResponseEntity.ok("Tables creation initiated");
+            createTableIfNotExists("RetailMind_Store", TableSchema.fromBean(Store.class));
+            createTableIfNotExists("RetailMind_Sku", TableSchema.fromBean(Sku.class));
+            createTableIfNotExists("RetailMind_Inventory", TableSchema.fromBean(InventoryItem.class));
+            return ResponseEntity.ok("Tables created or already exist");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error creating tables: " + e.getMessage());
+        }
+    }
+
+    private <T> void createTableIfNotExists(String tableName, TableSchema<T> schema) {
+        try {
+            enhancedClient.table(tableName, schema).createTable();
+        } catch (ResourceInUseException alreadyExists) {
+            // Table already exists, which is fine for idempotent initialization
         }
     }
 
@@ -54,6 +63,7 @@ public class DataSeederController {
         String[] mockSkuNames = { "Parle-G 100g", "Amul Butter 500g", "Maggi Masala 2-Min", "Aashirvaad Atta 5kg",
                 "Tata Salt 1kg" };
         String[] mockCategories = { "Snacks", "Dairy", "Snacks", "Staples", "Staples" };
+        int[] mockQuantities = { 1, 4, 10, 25, 40 }; // Mix of critical, high, medium, and healthy stock
 
         for (int i = 0; i < mockSkuNames.length; i++) {
             String skuId = UUID.randomUUID().toString();
@@ -71,7 +81,7 @@ public class DataSeederController {
             item.setSk("BATCH#" + UUID.randomUUID().toString());
             item.setStoreId(storeId);
             item.setSkuId(skuId);
-            item.setQuantity((int) (Math.random() * 50)); // Random quantity up to 50
+            item.setQuantity(mockQuantities[i]);
             repository.saveInventoryItem(item);
         }
 

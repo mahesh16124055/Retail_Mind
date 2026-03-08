@@ -3,7 +3,12 @@ package com.retailmind.api.interfaces.rest;
 import com.retailmind.api.application.dto.InventoryInsightResponse;
 import com.retailmind.api.application.service.InventoryInsightsService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -19,8 +24,10 @@ public class DashboardController {
     }
 
     @GetMapping("/insights/{storeId}")
-    public ResponseEntity<List<InventoryInsightResponse>> getStoreInsights(@PathVariable String storeId) {
-        List<InventoryInsightResponse> responses = insightsService.getInsightsForStore(storeId);
+    public ResponseEntity<List<InventoryInsightResponse>> getStoreInsights(
+            @PathVariable String storeId,
+            @RequestParam(name = "scenario", required = false) String scenario) {
+        List<InventoryInsightResponse> responses = insightsService.getInsightsForStore(storeId, scenario);
         return ResponseEntity.ok(responses);
     }
 }
