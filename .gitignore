@@ -103,3 +103,27 @@ package.yaml
 # Test scripts (exclude from production)
 test_app.py
 TESTING_SUMMARY.md
+*.ps1
+test-*.java
+test-*.html
+
+# Temporary documentation
+*_SUMMARY.md
+*_STATUS.md
+*_COMPLETE.md
+*_DEPLOYED.md
+*_APPLIED.md
+*_RESOLUTION.md
+*_EXPLANATION.md
+*_VALIDATION_REPORT.md
+
+# AWS SAM
+.aws-sam/
+package.yaml
+packaged.yaml
+
+# Deployment scripts
+deploy-*.ps1
+update-*.ps1
+verify-*.ps1
+s3-*.json

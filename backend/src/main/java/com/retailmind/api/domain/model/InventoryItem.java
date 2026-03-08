@@ -18,6 +18,8 @@ public class InventoryItem {
     private Integer quantity;
     private String expiryDate; // ISO-8601 string
     private String lastRestockDate;
+    private Integer reorderPoint;
+    private Integer safetyStock;
 
     @DynamoDbPartitionKey
     public String getPk() {
@@ -83,5 +85,21 @@ public class InventoryItem {
 
     public void setLastRestockDate(String lastRestockDate) {
         this.lastRestockDate = lastRestockDate;
+    }
+
+    public Integer getReorderPoint() {
+        return reorderPoint;
+    }
+
+    public void setReorderPoint(Integer reorderPoint) {
+        this.reorderPoint = reorderPoint;
+    }
+
+    public Integer getSafetyStock() {
+        return safetyStock;
+    }
+
+    public void setSafetyStock(Integer safetyStock) {
+        this.safetyStock = safetyStock;
     }
 }

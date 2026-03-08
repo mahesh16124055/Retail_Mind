@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rvp3e5r3v0.execute-api.us-east-1.amazonaws.com/Prod/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +8,33 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Add authentication interceptor
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle 401 errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface InventoryInsightResponse {
   skuId: string;

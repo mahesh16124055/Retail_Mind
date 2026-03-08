@@ -15,6 +15,8 @@ Globals:
 Resources:
   RetailMindApiFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
     Properties:
       CodeUri: backend/target/api-0.0.1-SNAPSHOT-aws.jar
       Handler: com.retailmind.api.infrastructure.lambda.StreamLambdaHandler::handleRequest

@@ -2,9 +2,19 @@
 
 ## Introduction
 
-The Inventory and Demand Intelligence platform is a simple AI-powered tool that helps retailers manage their inventory better. It predicts when products might run out, alerts about items nearing expiry, and suggests what actions to take.
+The Inventory and Demand Intelligence platform is an AI-powered tool that helps retailers manage their inventory better. It predicts when products might run out, alerts about items nearing expiry, and suggests what actions to take using Amazon Bedrock's generative AI capabilities.
 
-The system starts with basic features and can be expanded over time as needs grow.
+The system is built on AWS serverless architecture using Java/Spring Boot and can be expanded over time as needs grow.
+
+## Technology Stack
+
+- **Backend:** Java 21 with Spring Boot 3.2
+- **Compute:** AWS Lambda (serverless)
+- **Database:** Amazon DynamoDB (NoSQL)
+- **AI/ML:** Amazon Bedrock (Claude 3 Haiku)
+- **Caching:** Amazon ElastiCache (Redis)
+- **Frontend:** React with TypeScript
+- **Infrastructure:** AWS SAM (Serverless Application Model)
 
 ## Glossary
 

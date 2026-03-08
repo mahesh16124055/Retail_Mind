@@ -95,27 +95,28 @@ graph TB
 ### Technology Stack
 
 **Backend Services:**
-- **API Gateway**: Kong or AWS API Gateway for request routing and rate limiting
-- **Stream Processing**: Apache Kafka with Kafka Streams for real-time data processing
-- **Microservices**: Python (FastAPI) or Node.js (Express) for service implementation
-- **Message Queue**: Redis for caching and pub/sub messaging
+- **API Gateway**: AWS API Gateway for request routing and rate limiting
+- **Compute**: AWS Lambda with Java 21 runtime for serverless execution
+- **Framework**: Spring Boot 3.2 with AWS Serverless Java Container
+- **Message Queue**: Amazon SQS for asynchronous processing
+- **Caching**: Amazon ElastiCache (Redis) for frequently accessed data
 
-**Machine Learning Platform:**
-- **Training**: Python with scikit-learn, XGBoost, TensorFlow/PyTorch
-- **Serving**: MLflow or Kubeflow for model deployment and versioning
-- **Feature Store**: Feast or custom solution for feature management
-- **Monitoring**: Evidently AI or custom metrics for model performance tracking
+**AI/ML Platform:**
+- **Generative AI**: Amazon Bedrock with Claude 3 Haiku for recommendations
+- **Demand Forecasting**: Custom Java implementation with statistical models
+- **Model Storage**: Amazon S3 for model artifacts and versioning
+- **Monitoring**: Amazon CloudWatch for metrics and logging
 
 **Data Storage:**
-- **Time Series**: InfluxDB for high-frequency sales and sensor data
-- **Operational**: PostgreSQL for transactional data and user management
-- **Analytics**: ClickHouse for fast analytical queries and reporting
-- **Cache**: Redis for frequently accessed predictions and recommendations
+- **Primary Database**: Amazon DynamoDB (NoSQL) for operational data
+- **Time Series**: DynamoDB with TTL for historical sales data
+- **Analytics**: Amazon Athena for ad-hoc queries on S3 data
+- **Cache**: Amazon ElastiCache (Redis) for predictions and recommendations
 
 **Frontend:**
-- **Web Dashboard**: React.js with TypeScript for administrative interfaces
-- **Mobile App**: React Native for store manager mobile access
-- **Visualization**: D3.js or Chart.js for interactive charts and dashboards
+- **Web Dashboard**: React.js with TypeScript and Material-UI
+- **Hosting**: Amazon S3 + CloudFront for static site hosting
+- **Visualization**: Chart.js and Recharts for interactive dashboards
 
 ## Components and Interfaces
 
@@ -127,12 +128,14 @@ graph TB
 - Route data to appropriate storage systems and downstream services
 
 **Key Interfaces:**
-```python
-class DataIngestionService:
-    def ingest_pos_data(self, store_id: str, transactions: List[Transaction]) -> bool
-    def ingest_inventory_data(self, store_id: str, inventory: List[InventoryItem]) -> bool
-    def ingest_external_data(self, data_type: str, payload: Dict) -> bool
-    def validate_data_quality(self, data: Any) -> ValidationResult
+```java
+@Service
+public interface DataIngestionService {
+    boolean ingestPosData(String storeId, List<Transaction> transactions);
+    boolean ingestInventoryData(String storeId, List<InventoryItem> inventory);
+    boolean ingestExternalData(String dataType, Map<String, Object> payload);
+    ValidationResult validateDataQuality(Object data);
+}
 ```
 
 ### 2. Demand Prediction Service
@@ -143,18 +146,20 @@ class DataIngestionService:
 - Provide confidence intervals and prediction explanations
 
 **Core Algorithms:**
-- **ARIMA/SARIMA**: For products with clear seasonal patterns and stable trends
-- **Prophet**: For handling holidays, events, and irregular patterns
-- **LSTM Networks**: For complex non-linear patterns and long-term dependencies
-- **XGBoost**: For incorporating multiple external features and interactions
+- **Moving Average**: For products with stable demand patterns
+- **Exponential Smoothing**: For trending products
+- **Seasonal Decomposition**: For products with clear seasonal patterns
+- **Amazon Bedrock**: For contextual recommendations and insights
 
 **Key Interfaces:**
-```python
-class DemandPredictionService:
-    def predict_demand(self, sku_id: str, store_id: str, horizon_days: int) -> DemandForecast
-    def batch_predict(self, store_id: str, sku_list: List[str]) -> List[DemandForecast]
-    def update_model(self, sku_id: str, new_data: TimeSeriesData) -> bool
-    def explain_prediction(self, prediction_id: str) -> PredictionExplanation
+```java
+@Service
+public interface DemandPredictionService {
+    DemandForecast predictDemand(String skuId, String storeId, int horizonDays);
+    List<DemandForecast> batchPredict(String storeId, List<String> skuList);
+    boolean updateModel(String skuId, TimeSeriesData newData);
+    PredictionExplanation explainPrediction(String predictionId);
+}
 ```
 
 ### 3. Risk Detection Service
@@ -172,12 +177,14 @@ class DemandPredictionService:
 - **Anomaly Detection**: Statistical methods to identify unusual demand patterns
 
 **Key Interfaces:**
-```python
-class RiskDetectionService:
-    def detect_stockout_risk(self, sku_id: str, store_id: str) -> StockoutRisk
-    def detect_expiry_risk(self, store_id: str) -> List[ExpiryRisk]
-    def detect_overstock(self, store_id: str) -> List[OverstockRisk]
-    def calculate_risk_score(self, risk: Risk) -> float
+```java
+@Service
+public interface RiskDetectionService {
+    StockoutRisk detectStockoutRisk(String skuId, String storeId);
+    List<ExpiryRisk> detectExpiryRisk(String storeId);
+    List<OverstockRisk> detectOverstock(String storeId);
+    double calculateRiskScore(Risk risk);
+}
 ```
 
 ### 4. Recommendation Engine
@@ -194,12 +201,14 @@ class RiskDetectionService:
 - **Promotional Strategies**: Bundling and cross-selling opportunities
 
 **Key Interfaces:**
-```python
-class RecommendationEngine:
-    def generate_reorder_recommendations(self, store_id: str) -> List[ReorderRecommendation]
-    def generate_pricing_recommendations(self, store_id: str) -> List[PricingRecommendation]
-    def generate_redistribution_recommendations(self, region_id: str) -> List[RedistributionRecommendation]
-    def rank_recommendations(self, recommendations: List[Recommendation]) -> List[Recommendation]
+```java
+@Service
+public interface RecommendationEngine {
+    List<ReorderRecommendation> generateReorderRecommendations(String storeId);
+    List<PricingRecommendation> generatePricingRecommendations(String storeId);
+    List<RedistributionRecommendation> generateRedistributionRecommendations(String regionId);
+    List<Recommendation> rankRecommendations(List<Recommendation> recommendations);
+}
 ```
 
 ### 5. Inventory Optimization Service
@@ -216,118 +225,220 @@ class RecommendationEngine:
 - **Multi-echelon Optimization**: For quick-commerce networks with multiple fulfillment centers
 
 **Key Interfaces:**
-```python
-class InventoryOptimizationService:
-    def calculate_reorder_point(self, sku_id: str, store_id: str) -> ReorderPoint
-    def optimize_safety_stock(self, sku_id: str, store_id: str, service_level: float) -> SafetyStock
-    def calculate_optimal_order_quantity(self, sku_id: str, store_id: str) -> OrderQuantity
-    def optimize_multi_location_inventory(self, region_id: str) -> MultiLocationPlan
+```java
+@Service
+public interface InventoryOptimizationService {
+    ReorderPoint calculateReorderPoint(String skuId, String storeId);
+    SafetyStock optimizeSafetyStock(String skuId, String storeId, double serviceLevel);
+    OrderQuantity calculateOptimalOrderQuantity(String skuId, String storeId);
+    MultiLocationPlan optimizeMultiLocationInventory(String regionId);
+}
 ```
 
 ## Data Models
 
 ### Core Entities
 
-```python
-@dataclass
-class Store:
-    store_id: str
-    name: str
-    location: GeoLocation
-    store_type: StoreType  # KIRANA, DARK_STORE, WAREHOUSE
-    capacity_constraints: Dict[str, float]
-    operating_hours: TimeRange
+```java
+@DynamoDbBean
+@Data
+@Builder
+public class Store {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE"
     
-@dataclass
-class SKU:
-    sku_id: str
-    name: str
-    category: str
-    subcategory: str
-    brand: str
-    unit_cost: float
-    selling_price: float
-    shelf_life_days: int
-    storage_requirements: StorageRequirements
+    @DynamoDbSortKey
+    private String sk;  // "STORE#{storeId}"
     
-@dataclass
-class InventoryItem:
-    sku_id: str
-    store_id: str
-    current_stock: int
-    reserved_stock: int
-    available_stock: int
-    reorder_point: int
-    safety_stock: int
-    last_updated: datetime
-    batch_info: List[BatchInfo]
+    private String storeId;
+    private String name;
+    private String location;
+    private StoreType storeType;  // KIRANA, DARK_STORE, WAREHOUSE
+    private Map<String, Double> capacityConstraints;
+    private TimeRange operatingHours;
+    private Double totalDailySalesAverage;
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class SKU {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}"
     
-@dataclass
-class DemandForecast:
-    sku_id: str
-    store_id: str
-    forecast_date: date
-    predicted_demand: float
-    confidence_interval: Tuple[float, float]
-    model_used: str
-    external_factors: Dict[str, Any]
+    @DynamoDbSortKey
+    private String sk;  // "SKU#{skuId}"
     
-@dataclass
-class Risk:
-    risk_id: str
-    risk_type: RiskType  # STOCKOUT, EXPIRY, OVERSTOCK, ANOMALY
-    sku_id: str
-    store_id: str
-    severity: RiskSeverity  # LOW, MEDIUM, HIGH, CRITICAL
-    risk_score: float
-    estimated_impact: float
-    time_to_impact: timedelta
+    private String skuId;
+    private String name;
+    private String category;
+    private String subcategory;
+    private String brand;
+    private Double unitCost;
+    private Double sellingPrice;
+    private Integer shelfLifeDays;
+    private String barcode;
+    private StorageRequirements storageRequirements;
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class InventoryItem {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}#SKU#{skuId}"
     
-@dataclass
-class Recommendation:
-    recommendation_id: str
-    recommendation_type: RecommendationType
-    sku_id: str
-    store_id: str
-    action: str
-    parameters: Dict[str, Any]
-    expected_outcome: str
-    confidence_level: float
-    implementation_complexity: ComplexityLevel
-    estimated_roi: float
+    @DynamoDbSortKey
+    private String sk;  // "BATCH#{batchId}"
+    
+    private String storeId;
+    private String skuId;
+    private String batchId;
+    private Integer currentStock;
+    private Integer reservedStock;
+    private Integer availableStock;
+    private Integer reorderPoint;
+    private Integer safetyStock;
+    private String expiryDate;  // ISO-8601
+    private String lastRestockDate;
+    private Instant lastUpdated;
+    private List<BatchInfo> batchInfo;
+}
+
+@Data
+@Builder
+public class DemandForecast {
+    private String forecastId;
+    private String skuId;
+    private String storeId;
+    private LocalDate forecastDate;
+    private Double predictedDemand;
+    private ConfidenceInterval confidenceInterval;
+    private String modelUsed;
+    private Map<String, Object> externalFactors;
+    private Instant createdAt;
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class Risk {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}"
+    
+    @DynamoDbSortKey
+    private String sk;  // "RISK#{riskId}"
+    
+    private String riskId;
+    private RiskType riskType;  // STOCKOUT, EXPIRY, OVERSTOCK, ANOMALY
+    private String skuId;
+    private String storeId;
+    private RiskSeverity severity;  // LOW, MEDIUM, HIGH, CRITICAL
+    private Double riskScore;
+    private Double estimatedImpact;
+    private Duration timeToImpact;
+    private Instant detectedAt;
+    private String status;  // ACTIVE, RESOLVED, IGNORED
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class Recommendation {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}"
+    
+    @DynamoDbSortKey
+    private String sk;  // "REC#{recommendationId}"
+    
+    private String recommendationId;
+    private RecommendationType recommendationType;
+    private String skuId;
+    private String storeId;
+    private String action;
+    private Map<String, Object> parameters;
+    private String expectedOutcome;
+    private Double confidenceLevel;
+    private ComplexityLevel implementationComplexity;
+    private Double estimatedRoi;
+    private Instant createdAt;
+    private String status;  // PENDING, ACCEPTED, REJECTED, IMPLEMENTED
+}
 ```
 
 ### Time Series Data Models
 
-```python
-@dataclass
-class SalesTransaction:
-    transaction_id: str
-    store_id: str
-    sku_id: str
-    quantity: int
-    unit_price: float
-    total_amount: float
-    timestamp: datetime
-    customer_id: Optional[str]
+```java
+@DynamoDbBean
+@Data
+@Builder
+public class SalesTransaction {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}#SKU#{skuId}"
     
-@dataclass
-class InventoryMovement:
-    movement_id: str
-    store_id: str
-    sku_id: str
-    movement_type: MovementType  # SALE, PURCHASE, TRANSFER, ADJUSTMENT
-    quantity: int
-    timestamp: datetime
-    reference_id: str
+    @DynamoDbSortKey
+    private String sk;  // "SALE#{timestamp}"
     
-@dataclass
-class ExternalFactor:
-    factor_type: str  # WEATHER, EVENT, HOLIDAY, MARKET_PRICE
-    location: GeoLocation
-    timestamp: datetime
-    value: Union[float, str, Dict]
-    impact_categories: List[str]
+    private String transactionId;
+    private String storeId;
+    private String skuId;
+    private Integer quantity;
+    private Double unitPrice;
+    private Double totalAmount;
+    private Instant timestamp;
+    private String customerId;
+    
+    @DynamoDbSecondarySortKey(indexNames = "TimestampIndex")
+    private Long ttl;  // For automatic cleanup of old data
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class InventoryMovement {
+    @DynamoDbPartitionKey
+    private String pk;  // "STORE#{storeId}#SKU#{skuId}"
+    
+    @DynamoDbSortKey
+    private String sk;  // "MOVEMENT#{timestamp}"
+    
+    private String movementId;
+    private String storeId;
+    private String skuId;
+    private MovementType movementType;  // SALE, PURCHASE, TRANSFER, ADJUSTMENT
+    private Integer quantity;
+    private Instant timestamp;
+    private String referenceId;
+}
+
+@DynamoDbBean
+@Data
+@Builder
+public class ExternalFactor {
+    @DynamoDbPartitionKey
+    private String pk;  // "LOCATION#{location}"
+    
+    @DynamoDbSortKey
+    private String sk;  // "FACTOR#{factorType}#{timestamp}"
+    
+    private String factorType;  // WEATHER, EVENT, HOLIDAY, MARKET_PRICE
+    private String location;
+    private Instant timestamp;
+    private Object value;  // Can be String, Double, or Map
+    private List<String> impactCategories;
+}
+
+@Data
+@Builder
+public class UserFeedback {
+    private String feedbackId;
+    private String userId;
+    private String recommendationId;
+    private FeedbackType feedbackType;  // ACCEPTED, REJECTED, MODIFIED
+    private String comments;
+    private Map<String, Object> modifications;
+    private Instant createdAt;
+}
 ```
 
 ## Correctness Properties
@@ -627,7 +738,7 @@ The testing strategy employs a dual approach combining unit testing for specific
 ### Property-Based Testing Configuration
 
 **Testing Framework:**
-- Use Hypothesis (Python) for property-based testing implementation
+- Use JUnit 5 with QuickTheories for property-based testing implementation
 - Configure minimum 100 iterations per property test for statistical confidence
 - Implement custom generators for domain-specific data types (SKUs, stores, transactions)
 - Use shrinking capabilities to find minimal failing examples
@@ -635,18 +746,22 @@ The testing strategy employs a dual approach combining unit testing for specific
 **Property Test Implementation:**
 Each correctness property from the design document must be implemented as a property-based test with the following configuration:
 
-```python
-# Example property test structure
-@given(strategies.sku_data(), strategies.historical_sales())
-@settings(max_examples=100, deadline=30000)  # 30 second timeout
-def test_prediction_accuracy_property(sku_data, historical_sales):
-    """
-    Feature: inventory-demand-intelligence, Property 1: Prediction Accuracy
-    For any SKU with sufficient historical sales data, 
-    the demand prediction accuracy should be 85% or higher for 7-day forecasts
-    """
-    # Test implementation
-    pass
+```java
+// Example property test structure
+@Test
+@Property(trials = 100)
+public void testPredictionAccuracyProperty() {
+    qt()
+        .forAll(skuDataGenerator(), historicalSalesGenerator())
+        .checkAssert((skuData, historicalSales) -> {
+            /*
+             * Feature: inventory-demand-intelligence, Property 1: Prediction Accuracy
+             * For any SKU with sufficient historical sales data, 
+             * the demand prediction accuracy should be 85% or higher for 7-day forecasts
+             */
+            // Test implementation
+        });
+}
 ```
 
 **Test Data Generation:**

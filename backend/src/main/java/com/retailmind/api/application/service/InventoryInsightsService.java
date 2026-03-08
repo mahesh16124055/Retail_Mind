@@ -1,7 +1,9 @@
 package com.retailmind.api.application.service;
 
 import com.retailmind.api.application.dto.InventoryInsightResponse;
+import com.retailmind.api.domain.model.DemandForecast;
 import com.retailmind.api.domain.model.InventoryItem;
+import com.retailmind.api.domain.model.Risk;
 import com.retailmind.api.domain.model.Sku;
 import com.retailmind.api.domain.repository.RetailMindRepository;
 import org.springframework.stereotype.Service;
@@ -14,10 +16,17 @@ public class InventoryInsightsService {
 
     private final RetailMindRepository repository;
     private final BedrockGenAIService bedrockService;
+    private final DemandPredictionService demandPredictionService;
+    private final RiskDetectionService riskDetectionService;
 
-    public InventoryInsightsService(RetailMindRepository repository, BedrockGenAIService bedrockService) {
+    public InventoryInsightsService(RetailMindRepository repository, 
+                                   BedrockGenAIService bedrockService,
+                                   DemandPredictionService demandPredictionService,
+                                   RiskDetectionService riskDetectionService) {
         this.repository = repository;
         this.bedrockService = bedrockService;
+        this.demandPredictionService = demandPredictionService;
+        this.riskDetectionService = riskDetectionService;
     }
 
     public List<InventoryInsightResponse> getInsightsForStore(String storeId, String scenario) {
@@ -31,22 +40,25 @@ public class InventoryInsightsService {
             List<InventoryItem> items = repository.getInventoryForSku(storeId, sku.getSkuId());
             int totalStock = items.stream().mapToInt(InventoryItem::getQuantity).sum();
 
-            // Basic hardcoded logic for MVP (Assuming average daily demand is roughly
-            // totalStock / 3 for demo)
-            // In a full implementation, average daily demand would be calculated from
-            // historical orders.
-            int mockAverageDailyDemand = Math.max(1, totalStock / 3);
+            // Get real demand prediction
+            DemandForecast forecast = demandPredictionService.predictDemand(sku.getSkuId(), storeId, 1);
+            int predictedDailyDemand = forecast.getPredictedDemand().intValue();
 
-            String riskLevel = determineRiskLevel(totalStock, mockAverageDailyDemand);
+            // Detect risks
+            Risk stockoutRisk = riskDetectionService.detectStockoutRisk(sku.getSkuId(), storeId);
+            List<Risk> expiryRisks = riskDetectionService.detectExpiryRisk(sku.getSkuId(), storeId);
+            Risk overstockRisk = riskDetectionService.detectOverstockRisk(sku.getSkuId(), storeId);
 
-            // Only generate an AI recommendation for items with High/Critical risk, or
-            // randomly for the demo to save tokens.
+            // Determine overall risk level
+            String riskLevel = determineOverallRiskLevel(stockoutRisk, expiryRisks, overstockRisk);
+
+            // Generate AI recommendation for high-risk items
             String aiRec = "Stock appears healthy for now.";
-            if (riskLevel.equals("CRITICAL") || riskLevel.equals("HIGH") || totalStock < 5) {
+            if (riskLevel.equals("CRITICAL") || riskLevel.equals("HIGH") || totalStock < 10) {
                 aiRec = bedrockService.generateInventoryRecommendation(
                         sku.getName(),
                         totalStock,
-                        mockAverageDailyDemand,
+                        predictedDailyDemand,
                         scenario);
             }
 
@@ -62,16 +74,42 @@ public class InventoryInsightsService {
         return insights;
     }
 
-    private String determineRiskLevel(int totalStock, int dailyDemand) {
-        if (totalStock == 0)
+    private String determineOverallRiskLevel(Risk stockoutRisk, List<Risk> expiryRisks, Risk overstockRisk) {
+        // Priority: CRITICAL > HIGH > MEDIUM > LOW
+        if (stockoutRisk != null && "CRITICAL".equals(stockoutRisk.getSeverity())) {
             return "CRITICAL";
-
-        int daysOfCoverage = totalStock / dailyDemand;
-
-        if (daysOfCoverage < 3)
+        }
+        
+        for (Risk expiryRisk : expiryRisks) {
+            if ("CRITICAL".equals(expiryRisk.getSeverity())) {
+                return "CRITICAL";
+            }
+        }
+        
+        if (stockoutRisk != null && "HIGH".equals(stockoutRisk.getSeverity())) {
             return "HIGH";
-        if (daysOfCoverage < 7)
+        }
+        
+        for (Risk expiryRisk : expiryRisks) {
+            if ("HIGH".equals(expiryRisk.getSeverity())) {
+                return "HIGH";
+            }
+        }
+        
+        if (stockoutRisk != null && "MEDIUM".equals(stockoutRisk.getSeverity())) {
             return "MEDIUM";
+        }
+        
+        for (Risk expiryRisk : expiryRisks) {
+            if ("MEDIUM".equals(expiryRisk.getSeverity())) {
+                return "MEDIUM";
+            }
+        }
+        
+        if (overstockRisk != null) {
+            return overstockRisk.getSeverity();
+        }
+        
         return "LOW";
     }
 }
