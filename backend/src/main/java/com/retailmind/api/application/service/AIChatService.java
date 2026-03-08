@@ -1,5 +1,7 @@
 package com.retailmind.api.application.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.retailmind.api.application.dto.ChatRequest;
 import com.retailmind.api.application.dto.ChatResponse;
 import com.retailmind.api.domain.model.InventoryItem;
@@ -14,6 +16,7 @@ import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
 import software.amazon.awssdk.core.SdkBytes;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,7 +29,9 @@ public class AIChatService {
     private final BedrockRuntimeClient bedrockClient;
     private final RetailMindRepository repository;
     private final RiskDetectionService riskDetectionService;
+    private final ObjectMapper objectMapper;
     
+    private static final String MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
     private final Map<String, List<ChatResponse>> conversationHistory = new HashMap<>();
     
     public ChatResponse chat(ChatRequest request) {
@@ -85,46 +90,51 @@ public class AIChatService {
     
     private String generateAIResponse(String userMessage, String context) {
         try {
-            String prompt = String.format(
-                    "You are RetailMind AI, an expert retail inventory assistant. " +
-                    "Context: %s\n\n" +
+            String promptText = String.format(
+                    "You are RetailMind AI, an expert Indian retail inventory assistant for Kirana stores. " +
+                    "Current inventory context: %s\n\n" +
                     "User question: %s\n\n" +
-                    "Provide a concise, actionable response (2-3 sentences max).",
+                    "Provide a helpful, concise response (2-3 sentences max) with specific actionable advice.",
                     context, userMessage
             );
             
-            String requestBody = String.format(
-                    "{\"anthropic_version\":\"bedrock-2023-05-31\"," +
-                    "\"max_tokens\":200," +
-                    "\"messages\":[{\"role\":\"user\",\"content\":\"%s\"}]}",
-                    prompt.replace("\"", "\\\"").replace("\n", "\\n")
-            );
+            // Build proper Bedrock request using same format as BedrockGenAIService
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("anthropic_version", "bedrock-2023-05-31");
+            payload.put("max_tokens", 250);
+            
+            Map<String, Object> message = new HashMap<>();
+            message.put("role", "user");
+            
+            Map<String, Object> content = new HashMap<>();
+            content.put("type", "text");
+            content.put("text", promptText);
+            
+            message.put("content", List.of(content));
+            payload.put("messages", List.of(message));
+            
+            String payloadString = objectMapper.writeValueAsString(payload);
             
             InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
-                    .modelId("anthropic.claude-3-haiku-20240307-v1:0")
-                    .body(SdkBytes.fromUtf8String(requestBody))
+                    .modelId(MODEL_ID)
+                    .contentType("application/json")
+                    .accept("application/json")
+                    .body(SdkBytes.fromString(payloadString, StandardCharsets.UTF_8))
                     .build();
             
             InvokeModelResponse response = bedrockClient.invokeModel(invokeRequest);
             String responseBody = response.body().asUtf8String();
             
-            return extractTextFromBedrockResponse(responseBody);
+            // Extract text from Claude's response using Jackson
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            String aiText = rootNode.path("content").get(0).path("text").asText();
+            
+            log.info("Successfully generated AI response using Bedrock");
+            return aiText;
             
         } catch (Exception e) {
-            log.error("Error generating AI chat response", e);
+            log.error("Error generating AI chat response from Bedrock: {}", e.getMessage(), e);
             return generateFallbackResponse(userMessage, context);
-        }
-    }
-    
-    private String extractTextFromBedrockResponse(String responseBody) {
-        try {
-            int contentStart = responseBody.indexOf("\"text\":\"") + 8;
-            int contentEnd = responseBody.indexOf("\"", contentStart);
-            return responseBody.substring(contentStart, contentEnd)
-                    .replace("\\n", "\n")
-                    .replace("\\\"", "\"");
-        } catch (Exception e) {
-            return "I'm analyzing your inventory data. How can I help you optimize your stock?";
         }
     }
     
