@@ -71,6 +71,35 @@ Thumbs.db
 # Cache
 .cache/
 
+# Java/Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mtj.tmp/
+*.class
+*.jar
+*.war
+*.ear
+*.ear.deployed
+*.war.deployed
+*.jar.deployed
+*.ear.failed
+*.war.failed
+*.jar.failed
+.settings/
+.project
+.classpath
+.factorypath
+*.prefs
+.idea/
+*.iml
+*.iws
+.mvn/
+.metadata/
+
+# AWS SAM
+.aws-sam/
+package.yaml
+
 # Test scripts (exclude from production)
 test_app.py
 TESTING_SUMMARY.md
