@@ -31,7 +31,7 @@ public class AIChatService {
     private final RiskDetectionService riskDetectionService;
     private final ObjectMapper objectMapper;
     
-    private static final String MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+    private static final String MODEL_ID = "amazon.nova-micro-v1:0";
     private final Map<String, List<ChatResponse>> conversationHistory = new HashMap<>();
     
     public ChatResponse chat(ChatRequest request) {
@@ -44,15 +44,8 @@ public class AIChatService {
         // Build context from inventory data
         String context = buildInventoryContext(request.getStoreId());
         
-        // Generate AI response
-        String aiResponse = generateAIResponse(request.getMessage(), context);
-        
-        ChatResponse response = ChatResponse.builder()
-                .conversationId(conversationId)
-                .message(aiResponse)
-                .timestamp(LocalDateTime.now())
-                .isAI(true)
-                .build();
+        // Generate AI response with metadata
+        ChatResponse response = generateAIResponseWithMetadata(request.getMessage(), context, conversationId);
         
         // Store in conversation history
         conversationHistory.computeIfAbsent(conversationId, k -> new ArrayList<>()).add(response);
@@ -88,7 +81,10 @@ public class AIChatService {
         );
     }
     
-    private String generateAIResponse(String userMessage, String context) {
+    private ChatResponse generateAIResponseWithMetadata(String userMessage, String context, String conversationId) {
+        log.info("Attempting to generate AI response using Bedrock for message: {}", userMessage);
+        long startTime = System.currentTimeMillis();
+        
         try {
             String promptText = String.format(
                     "You are RetailMind AI, an expert Indian retail inventory assistant for Kirana stores. " +
@@ -98,22 +94,27 @@ public class AIChatService {
                     context, userMessage
             );
             
-            // Build proper Bedrock request using same format as BedrockGenAIService
+            log.info("Building Bedrock request payload...");
+            // Build Amazon Nova request payload
             Map<String, Object> payload = new HashMap<>();
-            payload.put("anthropic_version", "bedrock-2023-05-31");
-            payload.put("max_tokens", 250);
             
-            Map<String, Object> message = new HashMap<>();
-            message.put("role", "user");
+            Map<String, Object> messageObj = new HashMap<>();
+            messageObj.put("role", "user");
             
-            Map<String, Object> content = new HashMap<>();
-            content.put("type", "text");
-            content.put("text", promptText);
+            Map<String, Object> contentItem = new HashMap<>();
+            contentItem.put("text", promptText);
             
-            message.put("content", List.of(content));
-            payload.put("messages", List.of(message));
+            messageObj.put("content", List.of(contentItem));
+            payload.put("messages", List.of(messageObj));
+            
+            Map<String, Object> inferenceConfig = new HashMap<>();
+            inferenceConfig.put("max_new_tokens", 250);
+            inferenceConfig.put("temperature", 0.7);
+            
+            payload.put("inferenceConfig", inferenceConfig);
             
             String payloadString = objectMapper.writeValueAsString(payload);
+            log.info("Payload created, invoking Bedrock model: {}", MODEL_ID);
             
             InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
                     .modelId(MODEL_ID)
@@ -122,19 +123,52 @@ public class AIChatService {
                     .body(SdkBytes.fromString(payloadString, StandardCharsets.UTF_8))
                     .build();
             
+            log.info("Calling Bedrock API...");
             InvokeModelResponse response = bedrockClient.invokeModel(invokeRequest);
             String responseBody = response.body().asUtf8String();
+            String requestId = response.responseMetadata().requestId();
+            long latencyMs = System.currentTimeMillis() - startTime;
             
-            // Extract text from Claude's response using Jackson
+            log.info("Received Bedrock response with request ID: {}, latency: {}ms", requestId, latencyMs);
+            
+            // Extract text from Nova's response using Jackson
             JsonNode rootNode = objectMapper.readTree(responseBody);
-            String aiText = rootNode.path("content").get(0).path("text").asText();
+            String aiText = rootNode.path("output").path("message").path("content").get(0).path("text").asText();
             
-            log.info("Successfully generated AI response using Bedrock");
-            return aiText;
+            log.info("Successfully generated AI response using Bedrock: {}", aiText.substring(0, Math.min(50, aiText.length())));
+            
+            // Build response with Bedrock metadata
+            return ChatResponse.builder()
+                    .conversationId(conversationId)
+                    .message(aiText.trim())
+                    .timestamp(LocalDateTime.now())
+                    .isAI(true)
+                    .isFallback(false)
+                    .bedrockMetadata(ChatResponse.BedrockMetadata.builder()
+                            .requestId(requestId)
+                            .modelId(MODEL_ID)
+                            .latencyMs(latencyMs)
+                            .region("us-east-1")
+                            .build())
+                    .build();
             
         } catch (Exception e) {
-            log.error("Error generating AI chat response from Bedrock: {}", e.getMessage(), e);
-            return generateFallbackResponse(userMessage, context);
+            long latencyMs = System.currentTimeMillis() - startTime;
+            log.error("Error generating AI chat response from Bedrock - Exception type: {}, Message: {}, Latency: {}ms", 
+                    e.getClass().getName(), e.getMessage(), latencyMs, e);
+            log.error("Falling back to static response");
+            
+            String fallbackMessage = generateFallbackResponse(userMessage, context);
+            
+            // Return fallback response with isFallback flag set
+            return ChatResponse.builder()
+                    .conversationId(conversationId)
+                    .message(fallbackMessage)
+                    .timestamp(LocalDateTime.now())
+                    .isAI(true)
+                    .isFallback(true)
+                    .bedrockMetadata(null)
+                    .build();
         }
     }
     
@@ -154,5 +188,57 @@ public class AIChatService {
         }
         
         return "I'm here to help with inventory optimization. " + context + " What would you like to know?";
+    }
+    
+    public String testBedrockConnection() {
+        log.info("=== BEDROCK CONNECTION TEST START ===");
+        try {
+            String testPrompt = "Say 'Hello from Bedrock' in exactly 3 words.";
+            
+            Map<String, Object> payload = new HashMap<>();
+            
+            Map<String, Object> messageObj = new HashMap<>();
+            messageObj.put("role", "user");
+            
+            Map<String, Object> contentItem = new HashMap<>();
+            contentItem.put("text", testPrompt);
+            
+            messageObj.put("content", List.of(contentItem));
+            payload.put("messages", List.of(messageObj));
+            
+            Map<String, Object> inferenceConfig = new HashMap<>();
+            inferenceConfig.put("max_new_tokens", 50);
+            inferenceConfig.put("temperature", 0.7);
+            
+            payload.put("inferenceConfig", inferenceConfig);
+            
+            String payloadString = objectMapper.writeValueAsString(payload);
+            log.info("Test payload: {}", payloadString);
+            
+            InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
+                    .modelId(MODEL_ID)
+                    .contentType("application/json")
+                    .accept("application/json")
+                    .body(SdkBytes.fromString(payloadString, StandardCharsets.UTF_8))
+                    .build();
+            
+            log.info("Invoking Bedrock with model: {}", MODEL_ID);
+            InvokeModelResponse response = bedrockClient.invokeModel(invokeRequest);
+            String responseBody = response.body().asUtf8String();
+            log.info("Raw Bedrock response: {}", responseBody);
+            
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            String aiText = rootNode.path("output").path("message").path("content").get(0).path("text").asText();
+            
+            log.info("=== BEDROCK CONNECTION TEST SUCCESS ===");
+            return "SUCCESS: Bedrock is working! Response: " + aiText;
+            
+        } catch (Exception e) {
+            log.error("=== BEDROCK CONNECTION TEST FAILED ===");
+            log.error("Exception class: {}", e.getClass().getName());
+            log.error("Exception message: {}", e.getMessage());
+            log.error("Stack trace:", e);
+            return "FAILED: " + e.getClass().getSimpleName() + " - " + e.getMessage();
+        }
     }
 }

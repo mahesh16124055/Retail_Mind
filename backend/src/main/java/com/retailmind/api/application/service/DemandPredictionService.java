@@ -15,17 +15,29 @@ import java.util.stream.Collectors;
 public class DemandPredictionService {
 
     private final RetailMindRepository repository;
+    private final DatabaseConfigService databaseConfigService;
+    private final MockDataGeneratorService mockDataGeneratorService;
 
-    public DemandPredictionService(RetailMindRepository repository) {
+    public DemandPredictionService(RetailMindRepository repository,
+                                    DatabaseConfigService databaseConfigService,
+                                    MockDataGeneratorService mockDataGeneratorService) {
         this.repository = repository;
+        this.databaseConfigService = databaseConfigService;
+        this.mockDataGeneratorService = mockDataGeneratorService;
     }
 
     /**
      * Predict demand for a SKU using historical sales data
      * Implements moving average with trend adjustment
+     * In Mock mode, generates sample data instead of querying database
      */
     public DemandForecast predictDemand(String skuId, String storeId, int horizonDays) {
-        // Fetch historical sales transactions
+        // Check data mode - in Mock mode, generate sample data
+        if (databaseConfigService.isMockMode()) {
+            return mockDataGeneratorService.generateMockDemandForecast(skuId, storeId, horizonDays);
+        }
+        
+        // Production mode - fetch historical sales transactions from database
         List<SalesTransaction> historicalSales = repository.getSalesTransactions(storeId, skuId, 30);
         
         if (historicalSales.isEmpty()) {

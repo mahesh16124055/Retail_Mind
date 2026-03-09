@@ -20,8 +20,8 @@ public class BedrockGenAIService {
     private final BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
 
-    // Using Claude 3 Haiku for fast, cost-effective text generation
-    private static final String MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+    // Using Amazon Nova for fast, cost-effective text generation
+    private static final String MODEL_ID = "amazon.nova-micro-v1:0";
 
     public BedrockGenAIService(BedrockRuntimeClient bedrockClient, ObjectMapper objectMapper) {
         this.bedrockClient = bedrockClient;
@@ -48,18 +48,21 @@ public class BedrockGenAIService {
 
         try {
             Map<String, Object> payload = new HashMap<>();
-            payload.put("anthropic_version", "bedrock-2023-05-31");
-            payload.put("max_tokens", 180);
-
-            Map<String, Object> message = new HashMap<>();
-            message.put("role", "user");
-
-            Map<String, Object> content = new HashMap<>();
-            content.put("type", "text");
-            content.put("text", promptText);
-
-            message.put("content", List.of(content));
-            payload.put("messages", List.of(message));
+            
+            Map<String, Object> userMessage = new HashMap<>();
+            userMessage.put("role", "user");
+            
+            Map<String, Object> contentItem = new HashMap<>();
+            contentItem.put("text", promptText);
+            
+            userMessage.put("content", List.of(contentItem));
+            payload.put("messages", List.of(userMessage));
+            
+            Map<String, Object> inferenceConfig = new HashMap<>();
+            inferenceConfig.put("max_new_tokens", 180);
+            inferenceConfig.put("temperature", 0.7);
+            
+            payload.put("inferenceConfig", inferenceConfig);
 
             String payloadString = objectMapper.writeValueAsString(payload);
 
@@ -73,9 +76,9 @@ public class BedrockGenAIService {
             InvokeModelResponse response = bedrockClient.invokeModel(request);
             String responseBody = response.body().asUtf8String();
 
-            // Extract text from Claude's response
+            // Extract text from Nova's response
             JsonNode rootNode = objectMapper.readTree(responseBody);
-            return rootNode.path("content").get(0).path("text").asText();
+            return rootNode.path("output").path("message").path("content").get(0).path("text").asText().trim();
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error formatting Bedrock request/response", e);

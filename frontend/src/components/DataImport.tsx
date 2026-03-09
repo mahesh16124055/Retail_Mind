@@ -53,12 +53,35 @@ const DataImport: React.FC<DataImportProps> = ({ open, onClose, onImportSuccess 
                     return obj;
                 });
 
-            // TODO: Send to backend API endpoint for bulk import
-            console.log('Parsed CSV data:', data);
+            // Send to backend API endpoint for bulk import
+            const response = await fetch('/api/v1/data/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    records: data,
+                    strategy: {
+                        type: 'APPEND',
+                        createBackup: true,
+                        backupRetentionDays: 7
+                    },
+                    storeId: localStorage.getItem('storeId') || 'STORE-001'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Import failed: ${response.statusText}`);
+            }
+
+            const result = await response.json();
             
-            // Simulate upload delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
+            if (!result.successful) {
+                throw new Error(result.errors?.join(', ') || 'Import failed');
+            }
+
+            console.log('Import successful:', result);
             onImportSuccess();
             onClose();
         } catch (err: any) {

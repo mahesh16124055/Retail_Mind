@@ -27,4 +27,17 @@ public class ChatController {
         ChatResponse response = chatService.chat(request);
         return ResponseEntity.ok(response);
     }
+    
+    @GetMapping("/health")
+    @Operation(summary = "Test Bedrock connectivity")
+    public ResponseEntity<String> testBedrock() {
+        log.info("Testing Bedrock connectivity...");
+        try {
+            String result = chatService.testBedrockConnection();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Bedrock test failed", e);
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
+    }
 }

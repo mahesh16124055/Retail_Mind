@@ -18,12 +18,16 @@ import ExportReports from '../components/ExportReports';
 import AdvancedFilters, { type FilterState } from '../components/AdvancedFilters';
 import ForecastChart from '../components/ForecastChart';
 import FinancialImpact from '../components/FinancialImpact';
+import LandingState from '../components/LandingState';
 
 interface DashboardProps {
     storeId: string;
 }
 
+type DashboardMode = 'landing' | 'loading' | 'active';
+
 const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
+    const [mode, setMode] = useState<DashboardMode>('landing');
     const [insights, setInsights] = useState<InventoryInsightResponse[]>([]);
     const [filteredInsights, setFilteredInsights] = useState<InventoryInsightResponse[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -52,6 +56,7 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
     const fetchInsights = async (scenarioOverride?: typeof scenario) => {
         const effectiveScenario = scenarioOverride ?? scenario;
         setLoading(true);
+        setMode('loading');
         setError(null);
         setSuccessMessage(null);
         try {
@@ -59,9 +64,11 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
             setInsights(data);
             setFilteredInsights(data);
             setLastAnalysisTime(new Date());
+            setMode('active');
         } catch (err: any) {
             setError("Failed to fetch AI insights from the cloud backend. Please try again.");
             console.error(err);
+            setMode('landing');
         } finally {
             setLoading(false);
         }
@@ -90,34 +97,9 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         applyFilters(activeFilters);
     }, [insights]);
 
-    const handleInitializeDemo = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            setSuccessMessage(null);
-            
-            // Step 1: Init DynamoDB Tables
-            await RetailMindApi.initializeDatabase();
-            
-            // Step 2: Seed Mock Data
-            await RetailMindApi.seedData(storeId);
-            
-            // Step 3: Auto-fetch insights after seeding
-            await fetchInsights();
-            
-            setSuccessMessage(`✅ Demo data initialized for Store ${storeId}! ${insights.length} SKUs loaded with AI recommendations.`);
-            
-        } catch (err: any) {
-            const errorMsg = err.response?.data?.message || err.message || "Error initializing demo data";
-            setError(`Initialization failed: ${errorMsg}. Please try again or check backend logs.`);
-            console.error("Demo initialization error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleRunAIAnalysis = async () => {
-        if (insights.length === 0) {
+        if (insights.length === 0 && mode === 'active') {
             setError('Please initialize demo data first before running AI analysis.');
             return;
         }
@@ -127,9 +109,16 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         setSuccessMessage(`🤖 AI analysis refreshed! Generated new recommendations using Amazon Bedrock.`);
     };
 
+    const handleTriggerAnalysis = async () => {
+        await fetchInsights();
+    };
+
+    // Auto-load on mount
     useEffect(() => {
-        fetchInsights();
-    }, []);
+        if (mode === 'landing') {
+            fetchInsights();
+        }
+    }, [storeId]);
 
     const getRiskColor = (level: string) => {
         switch (level) {
@@ -173,10 +162,32 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
 
     return (
         <Box sx={{ flexGrow: 1, p: 3, bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+            {/* Show Landing State when mode is 'landing' */}
+            {mode === 'landing' && (
+                <LandingState storeId={storeId} onTriggerAnalysis={handleTriggerAnalysis} />
+            )}
+
+            {/* Show Loading State when mode is 'loading' */}
+            {mode === 'loading' && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+                    <CircularProgress size={60} sx={{ mb: 3 }} />
+                    <Typography variant="h6" color="text.secondary">
+                        Running AI analysis on inventory data...
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        AWS Bedrock is analyzing demand patterns and risk factors
+                    </Typography>
+                </Box>
+            )}
+
+            {/* Show Active Dashboard when mode is 'active' */}
+            {mode === 'active' && (
+                <>
             {/* Header Section */}
             <Paper elevation={0} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+                    {/* Title Section */}
+                    <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
                         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <Store sx={{ mr: 2, fontSize: 40 }} />
                             Inventory Intelligence Dashboard
@@ -190,7 +201,15 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
                             </Typography>
                         )}
                     </Box>
-                    <Box display="flex" gap={2} alignItems="center" flexDirection="column">
+
+                    {/* Actions Section - Desktop */}
+                    <Box sx={{ 
+                        display: { xs: 'none', md: 'flex' }, 
+                        flexDirection: 'column', 
+                        gap: 2,
+                        alignItems: 'flex-end'
+                    }}>
+                        {/* Scenario Selector */}
                         <ToggleButtonGroup
                             size="small"
                             value={scenario}
@@ -202,63 +221,196 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
                             <ToggleButton value="FESTIVAL">🎉 Festival</ToggleButton>
                             <ToggleButton value="SLUMP">🌧️ Slump</ToggleButton>
                         </ToggleButtonGroup>
-                        <Box display="flex" gap={1} flexWrap="wrap">
+
+                        {/* Primary Actions - Max 4 buttons with 16px spacing */}
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            {/* Analysis Controls - Primary */}
                             <Button 
                                 variant="contained" 
-                                sx={{ bgcolor: 'white', color: '#667eea', '&:hover': { bgcolor: '#f0f0f0' } }}
-                                onClick={handleInitializeDemo}
-                                size="small"
-                            >
-                                Initialize Demo Data
-                            </Button>
-                            <Button 
-                                variant="contained" 
-                                sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
-                                onClick={() => setBulkImportOpen(true)} 
-                                size="small"
-                                startIcon={<CloudUpload />}
-                            >
-                                Bulk Import
-                            </Button>
-                            <Button 
-                                variant="contained" 
-                                sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+                                sx={{ 
+                                    bgcolor: 'white', 
+                                    color: '#667eea', 
+                                    fontWeight: 'bold',
+                                    fontSize: '0.95rem',
+                                    px: 3,
+                                    '&:hover': { bgcolor: '#f0f0f0' } 
+                                }}
                                 onClick={handleRunAIAnalysis} 
                                 disabled={loading}
-                                size="small"
                                 startIcon={<Refresh />}
                             >
                                 Refresh AI
                             </Button>
+
+                            {/* Data Management - Primary */}
+                            <Button 
+                                variant="contained" 
+                                sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.9)', 
+                                    color: '#667eea',
+                                    fontWeight: 'bold',
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,1)' } 
+                                }}
+                                onClick={() => setBulkImportOpen(true)} 
+                                startIcon={<CloudUpload />}
+                            >
+                                Import Data
+                            </Button>
+
+                            {/* Data Management - Secondary (Dropdown) */}
                             <Tooltip title="Export reports">
                                 <IconButton 
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, color: 'white' }}
+                                    sx={{ 
+                                        bgcolor: 'rgba(255,255,255,0.2)', 
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, 
+                                        color: 'white',
+                                        width: 40,
+                                        height: 40
+                                    }}
                                     onClick={(e) => setExportAnchor(e.currentTarget)}
-                                    size="small"
                                 >
                                     <Download />
                                 </IconButton>
                             </Tooltip>
+
+                            {/* Analysis Controls - Secondary */}
                             <Tooltip title="Advanced filters">
                                 <IconButton 
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, color: 'white' }}
+                                    sx={{ 
+                                        bgcolor: 'rgba(255,255,255,0.2)', 
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, 
+                                        color: 'white',
+                                        width: 40,
+                                        height: 40
+                                    }}
                                     onClick={() => setFiltersOpen(true)}
-                                    size="small"
                                 >
                                     <Badge badgeContent={hasActiveFilters ? '!' : 0} color="error">
                                         <FilterList />
                                     </Badge>
                                 </IconButton>
                             </Tooltip>
+
+                            {/* Settings - Secondary */}
                             <Tooltip title="Database settings">
                                 <IconButton 
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, color: 'white' }}
+                                    sx={{ 
+                                        bgcolor: 'rgba(255,255,255,0.2)', 
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, 
+                                        color: 'white',
+                                        width: 40,
+                                        height: 40
+                                    }}
                                     onClick={() => setDbConfigOpen(true)}
-                                    size="small"
                                 >
                                     <Settings />
                                 </IconButton>
                             </Tooltip>
+                        </Box>
+                    </Box>
+
+                    {/* Actions Section - Mobile (Hamburger Menu) */}
+                    <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2, width: '100%' }}>
+                        {/* Scenario Selector - Mobile */}
+                        <ToggleButtonGroup
+                            size="small"
+                            value={scenario}
+                            exclusive
+                            onChange={handleScenarioChange}
+                            sx={{ bgcolor: 'white', width: '100%' }}
+                            fullWidth
+                        >
+                            <ToggleButton value="NORMAL">📅 Weekday</ToggleButton>
+                            <ToggleButton value="FESTIVAL">🎉 Festival</ToggleButton>
+                            <ToggleButton value="SLUMP">🌧️ Slump</ToggleButton>
+                        </ToggleButtonGroup>
+
+                        {/* Mobile Action Buttons - Stacked */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Button 
+                                variant="contained" 
+                                fullWidth
+                                sx={{ 
+                                    bgcolor: 'white', 
+                                    color: '#667eea', 
+                                    fontWeight: 'bold',
+                                    '&:hover': { bgcolor: '#f0f0f0' } 
+                                }}
+                                onClick={handleRunAIAnalysis} 
+                                disabled={loading}
+                                startIcon={<Refresh />}
+                            >
+                                Refresh AI Analysis
+                            </Button>
+
+                            <Button 
+                                variant="contained" 
+                                fullWidth
+                                sx={{ 
+                                    bgcolor: 'rgba(255,255,255,0.9)', 
+                                    color: '#667eea',
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,1)' } 
+                                }}
+                                onClick={() => setBulkImportOpen(true)} 
+                                startIcon={<CloudUpload />}
+                            >
+                                Import Data
+                            </Button>
+
+                            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                                <Button 
+                                    variant="outlined" 
+                                    fullWidth
+                                    sx={{ 
+                                        borderColor: 'rgba(255,255,255,0.5)',
+                                        color: 'white',
+                                        '&:hover': { 
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255,255,255,0.1)' 
+                                        } 
+                                    }}
+                                    onClick={(e) => setExportAnchor(e.currentTarget)}
+                                    startIcon={<Download />}
+                                >
+                                    Export
+                                </Button>
+
+                                <Button 
+                                    variant="outlined" 
+                                    fullWidth
+                                    sx={{ 
+                                        borderColor: 'rgba(255,255,255,0.5)',
+                                        color: 'white',
+                                        '&:hover': { 
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255,255,255,0.1)' 
+                                        } 
+                                    }}
+                                    onClick={() => setFiltersOpen(true)}
+                                    startIcon={<FilterList />}
+                                >
+                                    <Badge badgeContent={hasActiveFilters ? '!' : 0} color="error">
+                                        Filters
+                                    </Badge>
+                                </Button>
+
+                                <Button 
+                                    variant="outlined" 
+                                    fullWidth
+                                    sx={{ 
+                                        borderColor: 'rgba(255,255,255,0.5)',
+                                        color: 'white',
+                                        '&:hover': { 
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255,255,255,0.1)' 
+                                        } 
+                                    }}
+                                    onClick={() => setDbConfigOpen(true)}
+                                    startIcon={<Settings />}
+                                >
+                                    Settings
+                                </Button>
+                            </Box>
                         </Box>
                     </Box>
                 </Box>
@@ -276,40 +428,18 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
                 </Alert>
             )}
 
-            {loading ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', mt: 10 }}>
-                    <CircularProgress size={60} sx={{ mb: 3 }} />
-                    <Typography variant="h6" color="text.secondary">
-                        {insights.length === 0 ? 'Initializing demo data and running AI analysis...' : 'Running AI analysis...'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        This may take a few seconds
-                    </Typography>
-                </Box>
-            ) : insights.length === 0 && !error ? (
-                <Paper sx={{ p: 6, textAlign: 'center' }}>
-                    <Inventory sx={{ fontSize: 80, color: '#ccc', mb: 2 }} />
-                    <Typography variant="h5" gutterBottom>No Data Available</Typography>
-                    <Typography color="text.secondary" sx={{ mb: 3 }}>
-                        Click "Initialize Demo Data" to load sample inventory and see AI recommendations
-                    </Typography>
-                    <Button variant="contained" onClick={handleInitializeDemo}>
-                        Get Started
-                    </Button>
-                </Paper>
-            ) : (
-                <Grid container spacing={3}>
-                    {/* KPI Cards Row */}
-                    <Grid item xs={12} md={3}>
-                        <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                            <CardContent>
-                                <Box display="flex" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total SKUs</Typography>
-                                        <Typography variant="h3" fontWeight="bold">{totalSkus}</Typography>
-                                    </Box>
-                                    <Inventory sx={{ fontSize: 50, opacity: 0.3 }} />
+            <Grid container spacing={3}>
+                {/* KPI Cards Row */}
+                <Grid item xs={12} md={3}>
+                    <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                        <CardContent>
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
+                                <Box>
+                                    <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total SKUs</Typography>
+                                    <Typography variant="h3" fontWeight="bold">{totalSkus}</Typography>
                                 </Box>
+                                <Inventory sx={{ fontSize: 50, opacity: 0.3 }} />
+                            </Box>
                             </CardContent>
                         </Card>
                     </Grid>
@@ -512,7 +642,6 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
                         </Grid>
                     ))}
                 </Grid>
-            )}
 
             <DataImport 
                 open={importDialogOpen}
@@ -555,6 +684,8 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
                 onClose={() => setFiltersOpen(false)}
                 onApplyFilters={applyFilters}
             />
+                </>
+            )}
         </Box>
     );
 };

@@ -7,6 +7,7 @@ import {
     Notifications, Close, Warning, Error as ErrorIcon, 
     Info, CheckCircle, NotificationsActive 
 } from '@mui/icons-material';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AlertData {
     alertId: string;
@@ -28,6 +29,7 @@ interface AlertsPanelProps {
 const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
     const [open, setOpen] = useState(false);
     const [alerts, setAlerts] = useState<AlertData[]>([]);
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (storeId) fetchAlerts();
@@ -91,6 +93,16 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
         }
     };
 
+    const getSeverityLabel = (severity: string) => {
+        switch (severity) {
+            case 'CRITICAL': return t('alerts.critical');
+            case 'HIGH': return t('alerts.high');
+            case 'MEDIUM': return t('alerts.medium');
+            case 'LOW': return t('alerts.low');
+            default: return severity;
+        }
+    };
+
     return (
         <>
             <IconButton 
@@ -106,7 +118,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
                 <Box sx={{ width: 400, p: 3 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                         <Typography variant="h6" fontWeight="bold">
-                            🔔 Active Alerts
+                            🔔 {t('alerts.title')}
                         </Typography>
                         <IconButton onClick={() => setOpen(false)} size="small">
                             <Close />
@@ -115,7 +127,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
 
                     {unacknowledgedCount > 0 && (
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            {unacknowledgedCount} alert{unacknowledgedCount > 1 ? 's' : ''} need attention
+                            {unacknowledgedCount} {t('alerts.needAttention')}
                         </Alert>
                     )}
 
@@ -124,7 +136,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
                     {alerts.length === 0 ? (
                         <Box textAlign="center" py={4}>
                             <CheckCircle sx={{ fontSize: 60, color: '#4caf50', mb: 2 }} />
-                            <Typography color="text.secondary">No active alerts</Typography>
+                            <Typography color="text.secondary">{t('alerts.noAlerts')}</Typography>
                         </Box>
                     ) : (
                         <List>
@@ -149,7 +161,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
                                                         {alert.skuName}
                                                     </Typography>
                                                     <Chip 
-                                                        label={alert.severity}
+                                                        label={getSeverityLabel(alert.severity)}
                                                         size="small"
                                                         color={getSeverityColor(alert.severity) as any}
                                                     />
@@ -172,7 +184,7 @@ const AlertsPanel: React.FC<AlertsPanelProps> = ({ storeId }) => {
                                                             onClick={() => handleAcknowledge(alert.alertId)}
                                                             sx={{ mt: 1 }}
                                                         >
-                                                            Acknowledge
+                                                            {t('alerts.acknowledge')}
                                                         </Button>
                                                     )}
                                                 </Box>

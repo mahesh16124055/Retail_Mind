@@ -4,25 +4,45 @@ import {
     List, ListItem, Avatar, CircularProgress, Chip
 } from '@mui/material';
 import { Chat, Close, Send, SmartToy, Person } from '@mui/icons-material';
+import BedrockIndicator from './BedrockIndicator';
+import { useTranslation } from '../hooks/useTranslation';
+
+interface BedrockMetadata {
+    requestId: string;
+    modelId: string;
+    latencyMs: number;
+    region: string;
+}
 
 interface Message {
     conversationId: string;
     message: string;
     timestamp: string;
     isAI: boolean;
+    bedrockMetadata?: BedrockMetadata;
+    isFallback?: boolean;
 }
 
 interface AIChatAssistantProps {
     storeId: string;
+    open?: boolean;
+    onClose?: () => void;
 }
 
-const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
-    const [open, setOpen] = useState(false);
+const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId, open: externalOpen, onClose: externalOnClose }) => {
+    const [internalOpen, setInternalOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { t } = useTranslation();
+
+    // Use external open state if provided, otherwise use internal
+    const open = externalOpen !== undefined ? externalOpen : internalOpen;
+    const setOpen = externalOnClose ? (value: boolean) => {
+        if (!value) externalOnClose();
+    } : setInternalOpen;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,7 +68,8 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
 
         try {
             const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/chat`, {
+            const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+            const response = await fetch(`${apiUrl}/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -73,7 +94,7 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
             // Show error message to user
             const errorMsg: Message = {
                 conversationId: conversationId || '',
-                message: `Sorry, I encountered an error: ${err.message}. Please try again.`,
+                message: t('chat.error'),
                 timestamp: new Date().toISOString(),
                 isAI: true
             };
@@ -96,7 +117,7 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                         background: 'linear-gradient(135deg, #5568d3 0%, #653a8b 100%)'
                     }
                 }}
-                onClick={() => setOpen(true)}
+                onClick={() => setInternalOpen(true)}
             >
                 <Chat />
             </Fab>
@@ -107,14 +128,14 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                         <Box display="flex" justifyContent="space-between" alignItems="center">
                             <Box display="flex" alignItems="center">
                                 <SmartToy sx={{ mr: 1 }} />
-                                <Typography variant="h6" fontWeight="bold">AI Assistant</Typography>
+                                <Typography variant="h6" fontWeight="bold">{t('chat.title')}</Typography>
                             </Box>
                             <IconButton onClick={() => setOpen(false)} sx={{ color: 'white' }} size="small">
                                 <Close />
                             </IconButton>
                         </Box>
                         <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                            Ask me anything about your inventory
+                            {t('chat.subtitle')}
                         </Typography>
                     </Box>
 
@@ -123,22 +144,22 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                             <Box textAlign="center" py={4}>
                                 <SmartToy sx={{ fontSize: 60, color: '#ccc', mb: 2 }} />
                                 <Typography color="text.secondary" variant="body2" mb={2}>
-                                    Hi! I'm your AI inventory assistant. Ask me about stock levels, risks, or recommendations.
+                                    {t('chat.welcome')}
                                 </Typography>
                                 <Box display="flex" flexDirection="column" gap={1}>
                                     <Chip 
-                                        label="Which SKUs are critical?" 
-                                        onClick={() => setInput("Which SKUs are critical?")}
+                                        label={t('chat.prompt1')}
+                                        onClick={() => setInput(t('chat.prompt1'))}
                                         clickable
                                     />
                                     <Chip 
-                                        label="Show me high risk items" 
-                                        onClick={() => setInput("Show me high risk items")}
+                                        label={t('chat.prompt2')}
+                                        onClick={() => setInput(t('chat.prompt2'))}
                                         clickable
                                     />
                                     <Chip 
-                                        label="What should I reorder?" 
-                                        onClick={() => setInput("What should I reorder?")}
+                                        label={t('chat.prompt3')}
+                                        onClick={() => setInput(t('chat.prompt3'))}
                                         clickable
                                     />
                                 </Box>
@@ -156,6 +177,12 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                                         <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
                                             {new Date(msg.timestamp).toLocaleTimeString()}
                                         </Typography>
+                                        {msg.isAI && (
+                                            <BedrockIndicator 
+                                                bedrockMetadata={msg.bedrockMetadata}
+                                                isFallback={msg.isFallback}
+                                            />
+                                        )}
                                     </Paper>
                                 </ListItem>
                             ))}
@@ -166,6 +193,10 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                                     </Avatar>
                                     <Paper sx={{ p: 1.5 }}>
                                         <CircularProgress size={20} />
+                                        <Typography variant="caption" display="block" mt={0.5}>
+                                            {t('chat.analyzing')}
+                                        </Typography>
+                                        <BedrockIndicator isProcessing={true} />
                                     </Paper>
                                 </ListItem>
                             )}
@@ -178,7 +209,7 @@ const AIChatAssistant: React.FC<AIChatAssistantProps> = ({ storeId }) => {
                             <TextField
                                 fullWidth
                                 size="small"
-                                placeholder="Ask about inventory..."
+                                placeholder={t('chat.placeholder')}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}

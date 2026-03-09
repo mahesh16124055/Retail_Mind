@@ -27,7 +27,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnect }) => {
     const [tabValue, setTabValue] = useState(0);
     const [testing, setTesting] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [dataMode, setDataMode] = useState<'MOCK' | 'PRODUCTION'>('MOCK');
     
     // DynamoDB Config
     const [dynamoConfig, setDynamoConfig] = useState({
@@ -43,7 +46,8 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
         port: '5432',
         database: 'retailmind',
         username: 'postgres',
-        password: ''
+        password: '',
+        poolSize: '10'
     });
 
     // MySQL Config
@@ -52,30 +56,108 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
         port: '3306',
         database: 'retailmind',
         username: 'root',
-        password: ''
+        password: '',
+        poolSize: '10'
     });
+
+    // MongoDB Config
+    const [mongoConfig, setMongoConfig] = useState({
+        host: 'localhost',
+        port: '27017',
+        database: 'retailmind',
+        username: 'admin',
+        password: '',
+        poolSize: '10'
+    });
+
+    const handleModeChange = async (mode: 'MOCK' | 'PRODUCTION') => {
+        try {
+            await fetch(`http://localhost:8080/api/v1/database/mode?mode=${mode}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setDataMode(mode);
+        } catch (err) {
+            console.error('Failed to switch mode:', err);
+        }
+    };
 
     const handleTestConnection = async () => {
         setTesting(true);
         setConnectionStatus('idle');
+        setErrorMessage('');
         
         try {
-            // Simulate connection test
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const config = getCurrentConfig();
+            const response = await fetch('http://localhost:8080/api/v1/database/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(config)
+            });
             
-            // TODO: Call backend API to test connection
-            setConnectionStatus('success');
+            const result = await response.json();
+            
+            if (result.connected) {
+                setConnectionStatus('success');
+            } else {
+                setConnectionStatus('error');
+                setErrorMessage(result.errorMessage || 'Connection failed. Please check your credentials.');
+            }
         } catch (err) {
             setConnectionStatus('error');
+            setErrorMessage('Unable to connect to server. Please try again.');
         } finally {
             setTesting(false);
         }
     };
 
-    const handleConnect = () => {
-        const config = tabValue === 0 ? dynamoConfig : tabValue === 1 ? postgresConfig : mysqlConfig;
-        onConnect({ type: ['dynamodb', 'postgresql', 'mysql'][tabValue], ...config });
-        onClose();
+    const handleConnect = async () => {
+        // Validate connection before saving
+        if (connectionStatus !== 'success') {
+            setErrorMessage('Please test the connection first before saving.');
+            return;
+        }
+        
+        setSaving(true);
+        try {
+            const config = getCurrentConfig();
+            const response = await fetch('http://localhost:8080/api/v1/database/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(config)
+            });
+            
+            const result = await response.json();
+            
+            if (result.connected) {
+                onConnect(config);
+                onClose();
+            } else {
+                setErrorMessage(result.message || 'Failed to save configuration.');
+            }
+        } catch (err) {
+            setErrorMessage('Unable to save configuration. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const getCurrentConfig = () => {
+        const configs = [
+            { type: 'dynamodb', ...dynamoConfig },
+            { type: 'postgresql', ...postgresConfig },
+            { type: 'mysql', ...mysqlConfig },
+            { type: 'mongodb', ...mongoConfig }
+        ];
+        return configs[tabValue];
     };
 
     return (
@@ -91,10 +173,38 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
                     Configure your database connection. Currently using AWS DynamoDB in us-east-1.
                 </Alert>
 
-                <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                        Data Mode
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                            variant={dataMode === 'MOCK' ? 'contained' : 'outlined'}
+                            onClick={() => handleModeChange('MOCK')}
+                            sx={{ flex: 1 }}
+                        >
+                            Mock Data Mode
+                        </Button>
+                        <Button
+                            variant={dataMode === 'PRODUCTION' ? 'contained' : 'outlined'}
+                            onClick={() => handleModeChange('PRODUCTION')}
+                            sx={{ flex: 1 }}
+                        >
+                            Production Data Mode
+                        </Button>
+                    </Box>
+                    <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
+                        {dataMode === 'MOCK' 
+                            ? 'Using generated sample data for testing without real database connections.'
+                            : 'Querying configured database with live production data.'}
+                    </Typography>
+                </Box>
+
+                <Tabs value={tabValue} onChange={(_, v) => { setTabValue(v); setConnectionStatus('idle'); setErrorMessage(''); }} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                     <Tab label="DynamoDB (Current)" />
                     <Tab label="PostgreSQL" />
                     <Tab label="MySQL" />
+                    <Tab label="MongoDB" />
                 </Tabs>
 
                 <TabPanel value={tabValue} index={0}>
@@ -143,10 +253,7 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
                         <TextField label="Database" value={postgresConfig.database} onChange={(e) => setPostgresConfig({ ...postgresConfig, database: e.target.value })} fullWidth />
                         <TextField label="Username" value={postgresConfig.username} onChange={(e) => setPostgresConfig({ ...postgresConfig, username: e.target.value })} fullWidth />
                         <TextField label="Password" type="password" value={postgresConfig.password} onChange={(e) => setPostgresConfig({ ...postgresConfig, password: e.target.value })} fullWidth />
-                        
-                        <Alert severity="warning">
-                            PostgreSQL support is coming soon. Currently using DynamoDB.
-                        </Alert>
+                        <TextField label="Pool Size" type="number" value={postgresConfig.poolSize} onChange={(e) => setPostgresConfig({ ...postgresConfig, poolSize: e.target.value })} helperText="Connection pool size (5-50)" fullWidth />
                     </Box>
                 </TabPanel>
 
@@ -157,10 +264,18 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
                         <TextField label="Database" value={mysqlConfig.database} onChange={(e) => setMysqlConfig({ ...mysqlConfig, database: e.target.value })} fullWidth />
                         <TextField label="Username" value={mysqlConfig.username} onChange={(e) => setMysqlConfig({ ...mysqlConfig, username: e.target.value })} fullWidth />
                         <TextField label="Password" type="password" value={mysqlConfig.password} onChange={(e) => setMysqlConfig({ ...mysqlConfig, password: e.target.value })} fullWidth />
-                        
-                        <Alert severity="warning">
-                            MySQL support is coming soon. Currently using DynamoDB.
-                        </Alert>
+                        <TextField label="Pool Size" type="number" value={mysqlConfig.poolSize} onChange={(e) => setMysqlConfig({ ...mysqlConfig, poolSize: e.target.value })} helperText="Connection pool size (5-50)" fullWidth />
+                    </Box>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={3}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <TextField label="Host" value={mongoConfig.host} onChange={(e) => setMongoConfig({ ...mongoConfig, host: e.target.value })} fullWidth />
+                        <TextField label="Port" value={mongoConfig.port} onChange={(e) => setMongoConfig({ ...mongoConfig, port: e.target.value })} fullWidth />
+                        <TextField label="Database" value={mongoConfig.database} onChange={(e) => setMongoConfig({ ...mongoConfig, database: e.target.value })} fullWidth />
+                        <TextField label="Username" value={mongoConfig.username} onChange={(e) => setMongoConfig({ ...mongoConfig, username: e.target.value })} fullWidth />
+                        <TextField label="Password" type="password" value={mongoConfig.password} onChange={(e) => setMongoConfig({ ...mongoConfig, password: e.target.value })} fullWidth />
+                        <TextField label="Pool Size" type="number" value={mongoConfig.poolSize} onChange={(e) => setMongoConfig({ ...mongoConfig, poolSize: e.target.value })} helperText="Connection pool size (5-50)" fullWidth />
                     </Box>
                 </TabPanel>
 
@@ -171,17 +286,17 @@ const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ open, onClose, onConnec
                 )}
                 {connectionStatus === 'error' && (
                     <Alert severity="error" sx={{ mt: 2 }} icon={<ErrorIcon />}>
-                        Connection failed. Please check your credentials and try again.
+                        {errorMessage || 'Connection failed. Please check your credentials and try again.'}
                     </Alert>
                 )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleTestConnection} disabled={testing}>
+                <Button onClick={handleTestConnection} disabled={testing || saving}>
                     {testing ? 'Testing...' : 'Test Connection'}
                 </Button>
-                <Button onClick={handleConnect} variant="contained" disabled={tabValue !== 0}>
-                    Connect
+                <Button onClick={handleConnect} variant="contained" disabled={connectionStatus !== 'success' || saving}>
+                    {saving ? 'Saving...' : 'Save & Connect'}
                 </Button>
             </DialogActions>
         </Dialog>

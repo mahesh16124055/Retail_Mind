@@ -1,5 +1,6 @@
 package com.retailmind.api.interfaces.rest;
 
+import com.retailmind.api.application.service.DatabaseConfigService;
 import com.retailmind.api.domain.model.InventoryItem;
 import com.retailmind.api.domain.model.Sku;
 import com.retailmind.api.domain.model.Store;
@@ -19,10 +20,14 @@ public class DataSeederController {
 
     private final RetailMindRepository repository;
     private final DynamoDbEnhancedClient enhancedClient;
+    private final DatabaseConfigService databaseConfigService;
 
-    public DataSeederController(RetailMindRepository repository, DynamoDbEnhancedClient enhancedClient) {
+    public DataSeederController(RetailMindRepository repository, 
+                                DynamoDbEnhancedClient enhancedClient,
+                                DatabaseConfigService databaseConfigService) {
         this.repository = repository;
         this.enhancedClient = enhancedClient;
+        this.databaseConfigService = databaseConfigService;
     }
 
     @PostMapping("/init-tables")
@@ -119,6 +124,14 @@ public class DataSeederController {
 
     @PostMapping("/seed/{storeId}")
     public ResponseEntity<String> seedData(@PathVariable String storeId) {
+        
+        // Check data mode - in production mode, don't seed mock data
+        if (databaseConfigService.isProductionMode()) {
+            return ResponseEntity.ok("Production mode active - using real database data. Mock data seeding skipped.");
+        }
+        
+        // Mock mode - generate sample data
+        System.out.println("Mock mode active - generating sample data for store: " + storeId);
 
         // Create Mock Store
         Store store = new Store();

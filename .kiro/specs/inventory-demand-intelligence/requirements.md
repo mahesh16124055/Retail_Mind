@@ -1,5 +1,7 @@
 # Requirements Document: Inventory and Demand Intelligence Platform
 
+> **Implementation Status**: This platform has been successfully implemented and deployed as RetailMind - an AI-powered inventory management system for Indian kirana stores. The live application is available at: http://retailmind-hackathon-ui.s3-website-us-east-1.amazonaws.com/
+
 ## Introduction
 
 The Inventory and Demand Intelligence platform is an AI-powered tool that helps retailers manage their inventory better. It predicts when products might run out, alerts about items nearing expiry, and suggests what actions to take using Amazon Bedrock's generative AI capabilities.
@@ -11,10 +13,13 @@ The system is built on AWS serverless architecture using Java/Spring Boot and ca
 - **Backend:** Java 21 with Spring Boot 3.2
 - **Compute:** AWS Lambda (serverless)
 - **Database:** Amazon DynamoDB (NoSQL)
-- **AI/ML:** Amazon Bedrock (Claude 3 Haiku)
-- **Caching:** Amazon ElastiCache (Redis)
-- **Frontend:** React with TypeScript
+- **AI/ML:** Amazon Bedrock (Nova Pro model)
+- **Security:** AWS KMS for encryption
+- **Storage:** Amazon S3
+- **API:** Amazon API Gateway
+- **Frontend:** React 18 with TypeScript and Material-UI
 - **Infrastructure:** AWS SAM (Serverless Application Model)
+- **Build:** Maven 3.8+
 
 ## Glossary
 

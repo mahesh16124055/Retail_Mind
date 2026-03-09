@@ -1,0 +1,127 @@
+skuName,category,quantity,price,cost
+Parle-G Gold 100g,Biscuits,45,10,7
+Britannia Good Day 100g,Biscuits,38,20,14
+Sunfeast Dark Fantasy 75g,Biscuits,22,30,22
+Britannia Marie Gold 250g,Biscuits,55,35,28
+Parle 20-20 Cookies 200g,Biscuits,42,30,24
+Oreo Biscuits 120g,Biscuits,28,30,24
+Hide & Seek 100g,Biscuits,35,20,15
+Maggi 2-Minute Noodles,Instant Food,85,12,8
+Top Ramen Curry,Instant Food,42,12,8
+Yippee Noodles,Instant Food,55,10,7
+Knorr Soupy Noodles,Instant Food,32,15,11
+Sunfeast Yippee Tricolor,Instant Food,28,12,9
+Maggi Cuppa Mania,Instant Food,18,25,19
+Amul Butter 100g,Dairy,18,55,45
+Amul Cheese Slices 200g,Dairy,12,130,105
+Mother Dairy Milk 500ml,Dairy,8,28,24
+Amul Taaza 1L,Dairy,6,62,52
+Nestle Milkmaid 400g,Dairy,15,145,120
+Amul Fresh Cream 250ml,Dairy,10,85,70
+Britannia Cheese Spread 180g,Dairy,14,95,78
+Aashirvaad Atta 5kg,Staples,15,285,240
+Aashirvaad Atta 10kg,Staples,8,550,475
+Tata Salt 1kg,Staples,32,22,18
+Tata Salt 500g,Staples,48,12,9
+India Gate Basmati 5kg,Staples,12,485,420
+Fortune Besan 500g,Staples,25,55,45
+Tata Sampann Moong Dal 1kg,Staples,18,125,105
+Tata Sampann Toor Dal 1kg,Staples,16,145,125
+Fortune Sunflower Oil 1L,Cooking Oil,25,145,125
+Saffola Gold Oil 1L,Cooking Oil,10,220,190
+Dhara Mustard Oil 1L,Cooking Oil,15,165,140
+Sundrop Heart Oil 1L,Cooking Oil,18,155,132
+Fortune Rice Bran Oil 1L,Cooking Oil,8,185,158
+Tata Tea Gold 250g,Beverages,28,140,115
+Red Label Tea 250g,Beverages,35,125,100
+Taj Mahal Tea 250g,Beverages,22,155,130
+Society Tea 250g,Beverages,30,110,90
+Nescafe Classic 50g,Beverages,20,180,150
+Bru Instant Coffee 50g,Beverages,18,165,138
+Bournvita 500g,Health Drinks,16,245,205
+Horlicks 500g,Health Drinks,14,280,235
+Complan 500g,Health Drinks,8,295,250
+Boost 500g,Health Drinks,12,265,225
+Protinex 250g,Health Drinks,6,385,330
+Colgate MaxFresh 150g,Personal Care,42,95,75
+Colgate Total 150g,Personal Care,35,105,85
+Pepsodent 150g,Personal Care,38,55,42
+Sensodyne 75g,Personal Care,12,185,155
+Close Up 150g,Personal Care,28,85,68
+Lux Soap 125g,Personal Care,55,35,28
+Dettol Soap 125g,Personal Care,32,45,35
+Lifebuoy Soap 125g,Personal Care,48,28,22
+Pears Soap 125g,Personal Care,25,55,45
+Dove Soap 100g,Personal Care,18,75,62
+Clinic Plus Shampoo 340ml,Personal Care,22,145,120
+Pantene Shampoo 340ml,Personal Care,15,220,185
+Head & Shoulders 340ml,Personal Care,12,285,240
+Sunsilk Shampoo 340ml,Personal Care,20,165,138
+Dove Shampoo 340ml,Personal Care,10,295,250
+Fair & Lovely 50g,Personal Care,32,125,105
+Ponds Cream 100ml,Personal Care,18,185,155
+Nivea Cream 100ml,Personal Care,14,225,190
+Vaseline Lotion 200ml,Personal Care,16,145,122
+Gillette Mach3 Razor,Personal Care,8,285,240
+Surf Excel 1kg,Household,18,185,155
+Ariel Matic 1kg,Household,12,245,205
+Tide Plus 1kg,Household,15,165,140
+Rin Bar 250g,Household,35,28,22
+Wheel Washing Powder 1kg,Household,22,95,78
+Vim Bar 200g,Household,45,18,14
+Pril Liquid 500ml,Household,18,125,105
+Harpic Toilet Cleaner 500ml,Household,25,95,78
+Lizol Floor Cleaner 500ml,Household,18,115,95
+Colin Glass Cleaner 500ml,Household,12,145,122
+Mortein Spray 400ml,Household,15,185,155
+Good Knight Refill,Household,28,85,70
+All Out Refill,Household,32,75,62
+Lays Classic 52g,Snacks,65,20,14
+Lays American Cream 52g,Snacks,48,20,14
+Kurkure Masala Munch 82g,Snacks,48,20,14
+Bingo Mad Angles 72g,Snacks,38,20,14
+Haldiram Bhujia 200g,Snacks,28,60,48
+Bikaji Aloo Bhujia 200g,Snacks,22,55,44
+Haldiram Namkeen 200g,Snacks,25,65,52
+Parle Monaco 200g,Snacks,35,30,22
+Britannia Treat Croissant,Snacks,42,10,7
+Cadbury Dairy Milk 55g,Chocolates,55,30,24
+Cadbury 5 Star 22g,Chocolates,48,10,7
+KitKat 37g,Chocolates,38,20,15
+Munch 11g,Chocolates,65,5,3
+Perk 28g,Chocolates,52,10,7
+Coca Cola 600ml,Cold Drinks,5,40,32
+Pepsi 600ml,Cold Drinks,4,40,32
+Sprite 600ml,Cold Drinks,6,40,32
+Thums Up 600ml,Cold Drinks,7,40,32
+Fanta 600ml,Cold Drinks,5,40,32
+Limca 600ml,Cold Drinks,6,40,32
+Mountain Dew 600ml,Cold Drinks,4,40,32
+Frooti 200ml,Juices,25,20,16
+Maaza 200ml,Juices,22,20,16
+Real Juice 1L,Juices,8,110,90
+Tropicana Orange 1L,Juices,6,125,105
+Paper Boat Aamras 250ml,Juices,12,35,28
+Amul Kool 200ml,Dairy Drinks,18,15,12
+Kissan Tomato Ketchup 500g,Condiments,22,95,78
+Maggi Hot & Sweet 500g,Condiments,18,85,70
+Tops Tomato Sauce 500g,Condiments,20,75,62
+Veeba Mayonnaise 250g,Condiments,12,125,105
+Everest Chilli Powder 100g,Spices,32,55,45
+MDH Garam Masala 100g,Spices,28,65,52
+Catch Salt & Pepper 100g,Spices,25,45,36
+Tata Sampann Turmeric 200g,Spices,20,85,70
+Everest Coriander Powder 100g,Spices,28,48,38
+MDH Chaat Masala 100g,Spices,22,55,44
+Catch Cumin Seeds 100g,Spices,18,75,62
+Colgate Toothbrush,Personal Care,35,45,35
+Oral-B Toothbrush,Personal Care,22,85,70
+Vicks Vaporub 50ml,Healthcare,28,125,105
+Dettol Antiseptic 125ml,Healthcare,18,95,78
+Moov Pain Relief 50g,Healthcare,15,145,122
+Volini Spray 60g,Healthcare,8,225,190
+Crocin Advance 15 Tablets,Healthcare,25,28,22
+Disprin 10 Tablets,Healthcare,32,18,14
+Vicks Action 500 10 Tablets,Healthcare,22,45,36
+Dabur Chyawanprash 500g,Healthcare,10,285,240
+Patanjali Honey 500g,Healthcare,12,185,155

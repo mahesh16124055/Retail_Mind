@@ -7,11 +7,11 @@ interface StoreSelectorProps {
 }
 
 const STORES = [
-  { id: '101', name: 'Mumbai Central Store', location: 'Mumbai, Maharashtra' },
-  { id: '102', name: 'Delhi NCR Store', location: 'New Delhi' },
-  { id: '103', name: 'Bangalore Tech Store', location: 'Bangalore, Karnataka' },
-  { id: '104', name: 'Chennai Marina Store', location: 'Chennai, Tamil Nadu' },
-  { id: '105', name: 'Kolkata Park Store', location: 'Kolkata, West Bengal' },
+  { id: '101', name: 'Sharma Kirana Store', location: 'Varanasi, Uttar Pradesh' },
+  { id: '102', name: 'Patel General Store', location: 'Ahmedabad, Gujarat' },
+  { id: '103', name: 'Kumar Provision Store', location: 'Patna, Bihar' },
+  { id: '104', name: 'Singh Grocery', location: 'Amritsar, Punjab' },
+  { id: '105', name: 'Reddy Supermarket', location: 'Hyderabad, Telangana' },
 ];
 
 const StoreSelector: React.FC<StoreSelectorProps> = ({ onStoreSelect, currentStore }) => {

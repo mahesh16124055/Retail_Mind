@@ -19,16 +19,30 @@ public class RiskDetectionService {
 
     private final RetailMindRepository repository;
     private final DemandPredictionService demandPredictionService;
+    private final DatabaseConfigService databaseConfigService;
+    private final MockDataGeneratorService mockDataGeneratorService;
 
-    public RiskDetectionService(RetailMindRepository repository, DemandPredictionService demandPredictionService) {
+    public RiskDetectionService(RetailMindRepository repository, 
+                                 DemandPredictionService demandPredictionService,
+                                 DatabaseConfigService databaseConfigService,
+                                 MockDataGeneratorService mockDataGeneratorService) {
         this.repository = repository;
         this.demandPredictionService = demandPredictionService;
+        this.databaseConfigService = databaseConfigService;
+        this.mockDataGeneratorService = mockDataGeneratorService;
     }
 
     /**
      * Detect all risks for a store
+     * In Mock mode, generates sample risks instead of querying database
      */
     public List<Risk> detectAllRisks(String storeId) {
+        // Check data mode - in Mock mode, generate sample data
+        if (databaseConfigService.isMockMode()) {
+            return mockDataGeneratorService.generateMockRisks(storeId, 5);
+        }
+        
+        // Production mode - fetch from database
         List<Risk> allRisks = new ArrayList<>();
         
         List<Sku> skus = repository.getSkusForStore(storeId);

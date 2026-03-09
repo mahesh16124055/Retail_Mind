@@ -44,6 +44,40 @@ export interface InventoryInsightResponse {
   aiRecommendation: string;
 }
 
+export interface DatabaseConfigRequest {
+  type: string;
+  host?: string;
+  port?: string;
+  database?: string;
+  username?: string;
+  password?: string;
+  poolSize?: string;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  tablePrefix?: string;
+}
+
+export interface ConnectionStatus {
+  connected: boolean;
+  errorMessage?: string;
+  latencyMs?: number;
+  testedAt?: string;
+}
+
+export interface DatabaseConfigResponse {
+  type: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  username?: string;
+  poolSize?: number;
+  region?: string;
+  tablePrefix?: string;
+  connected: boolean;
+  message: string;
+}
+
 export const RetailMindApi = {
   getInsights: async (storeId: string, scenario?: string): Promise<InventoryInsightResponse[]> => {
     const response = await apiClient.get(`/dashboard/insights/${storeId}`, {

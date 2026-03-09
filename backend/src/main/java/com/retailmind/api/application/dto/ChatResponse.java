@@ -16,4 +16,17 @@ public class ChatResponse {
     private String message;
     private LocalDateTime timestamp;
     private Boolean isAI;
+    private BedrockMetadata bedrockMetadata;
+    private Boolean isFallback;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BedrockMetadata {
+        private String requestId;
+        private String modelId;
+        private Long latencyMs;
+        private String region;
+    }
 }
