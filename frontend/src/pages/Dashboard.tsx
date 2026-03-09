@@ -61,8 +61,18 @@ const Dashboard: React.FC<DashboardProps> = ({ storeId }) => {
         setSuccessMessage(null);
         try {
             const data = await RetailMindApi.getInsights(storeId, effectiveScenario);
-            setInsights(data);
-            setFilteredInsights(data);
+            
+            // Deduplicate SKUs - keep only the first occurrence of each SKU name
+            const deduplicatedData = data.reduce((acc: InventoryInsightResponse[], current) => {
+                const exists = acc.find(item => item.skuName === current.skuName);
+                if (!exists) {
+                    acc.push(current);
+                }
+                return acc;
+            }, []);
+            
+            setInsights(deduplicatedData);
+            setFilteredInsights(deduplicatedData);
             setLastAnalysisTime(new Date());
             setMode('active');
         } catch (err: any) {

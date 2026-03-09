@@ -11,6 +11,13 @@ Globals:
         # Faster startup for Spring Boot in Lambda
         JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
         SPRING_PROFILES_ACTIVE: "prod"
+  Api:
+    # Rate limiting to protect against excessive Bedrock API usage
+    MethodSettings:
+      - ResourcePath: "/*"
+        HttpMethod: "*"
+        ThrottlingBurstLimit: 50      # Max concurrent requests
+        ThrottlingRateLimit: 10        # Requests per second (steady state)
 
 Resources:
   RetailMindApiFunction:
@@ -33,6 +40,23 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+
+  # Usage Plan for additional rate limiting protection
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ServerlessRestApiProdStage
+    Properties:
+      UsagePlanName: RetailMindHackathonPlan
+      Description: Rate limiting for hackathon demo - 5000 requests/day
+      ApiStages:
+        - ApiId: !Ref ServerlessRestApi
+          Stage: Prod
+      Quota:
+        Limit: 5000
+        Period: DAY
+      Throttle:
+        BurstLimit: 50
+        RateLimit: 10
 
 Outputs:
   RetailMindApi:

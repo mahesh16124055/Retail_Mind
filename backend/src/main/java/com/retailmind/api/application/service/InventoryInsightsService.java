@@ -71,7 +71,17 @@ public class InventoryInsightsService {
                     .build());
         }
 
-        return insights;
+        // Deduplicate by SKU name - keep first occurrence
+        List<InventoryInsightResponse> deduplicated = new ArrayList<>();
+        for (InventoryInsightResponse insight : insights) {
+            boolean exists = deduplicated.stream()
+                    .anyMatch(i -> i.getSkuName().equals(insight.getSkuName()));
+            if (!exists) {
+                deduplicated.add(insight);
+            }
+        }
+
+        return deduplicated;
     }
 
     private String determineOverallRiskLevel(Risk stockoutRisk, List<Risk> expiryRisks, Risk overstockRisk) {

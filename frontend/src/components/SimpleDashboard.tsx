@@ -140,9 +140,9 @@ const SimpleDashboard: React.FC<SimpleDashboardProps> = ({ storeId, storeName, o
             : `${minutes} ${t('prod.minutesAgo')}`;
     };
 
-    // Deduplicate insights by SKU ID (keep first occurrence)
+    // Deduplicate insights by SKU name (keep first occurrence)
     const deduplicatedInsights = insights.reduce((acc, current) => {
-        const exists = acc.find(item => item.skuId === current.skuId);
+        const exists = acc.find(item => item.skuName === current.skuName);
         if (!exists) {
             acc.push(current);
         }
